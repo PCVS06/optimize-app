@@ -47,11 +47,11 @@ describe("window-manager", () => {
     it("accepts partial runtime overlay updates", () => {
       expect(
         readWindowChromeUpdate({
-          backgroundColor: "#181B1A",
+          backgroundColor: "#2B2B2B",
           trafficLightOffsetY: -5,
         }),
       ).toEqual({
-        backgroundColor: "#181B1A",
+        backgroundColor: "#2B2B2B",
         trafficLightOffsetY: -5,
       });
     });

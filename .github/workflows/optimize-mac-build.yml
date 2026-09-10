@@ -42,7 +42,7 @@ jobs:
           --bail=1
       - name: Verify branded desktop packaging and navigation
         working-directory: packages/desktop
-        run: npx vitest run src/daemon/desktop-packaging.test.ts src/agent-navigation.test.ts --bail=1
+        run: npx vitest run src/daemon/desktop-packaging.test.ts src/agent-navigation.test.ts src/window/window-manager.test.ts --bail=1
       - name: Verify deep links
         working-directory: packages/protocol
         run: npx vitest run src/agent-deep-link.test.ts --bail=1
