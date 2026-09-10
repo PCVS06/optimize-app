@@ -187,10 +187,10 @@ export default {
       fdroidBuild: isFdroidBuild,
       profileBuild: isProfileBuild,
       router: {},
-      eas: {
-        projectId: "0e7f65ce-0367-46c8-a238-2b65963d235a",
-      },
+      ...(process.env.OPTIMIZE_EAS_PROJECT_ID
+        ? { eas: { projectId: process.env.OPTIMIZE_EAS_PROJECT_ID } }
+        : {}),
     },
-    owner: "getpaseo",
+    ...(process.env.OPTIMIZE_EXPO_OWNER ? { owner: process.env.OPTIMIZE_EXPO_OWNER } : {}),
   },
 };

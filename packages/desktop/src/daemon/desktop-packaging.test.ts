@@ -123,7 +123,7 @@ describe("desktop packaging", () => {
     const config = readFileSync(join(packageRoot, "electron-builder.yml"), "utf8");
 
     expect(config).toContain("name: Optimize agent link");
-    expect(config).toContain("- paseo");
+    expect(config).toContain("- optimize");
   });
 
   // electron-builder packs production dependencies declared in package.json into

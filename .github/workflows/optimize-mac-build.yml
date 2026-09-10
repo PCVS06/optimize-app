@@ -22,10 +22,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Verify source formatting
         run: npm run format:check
-      - name: Build the Optimize app
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run build:desktop -- --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false
+      - name: Build shared packages
+        run: |
+          npm run build:server
+          npm run build:app-deps
       - name: Check types and lint
         run: |
           npm run typecheck
@@ -49,6 +49,13 @@ jobs:
       - name: Verify appearance
         working-directory: packages/app
         run: npx vitest run src/styles/theme.test.ts --project=unit --bail=1
+      - name: Bundle and package the Optimize app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          (cd packages/app && PASEO_WEB_PLATFORM=electron npx expo export --platform web)
+          npm run build:main --workspace=@getpaseo/desktop
+          (cd packages/desktop && npx electron-builder --config electron-builder.yml --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false)
       - name: Launch packaged app and verify its daemon and terminal
         env:
           PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/optimize-smoke

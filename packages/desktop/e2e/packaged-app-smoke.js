@@ -899,6 +899,24 @@ async function smokePackagedDesktopApp({ appPath }) {
     console.log("Packaged desktop smoke: renderer-started desktop daemon reported running");
     await smokeCliShim({ appPath, env });
     await smokeCliTerminal({ appPath, env });
+    const providers = await runCliShimJsonCommand({
+      appPath,
+      env,
+      args: ["provider", "ls"],
+      label: "Optimize Pi provider discovery",
+    });
+    if (!Array.isArray(providers) || providers.length !== 1 || providers[0].provider !== "pi") {
+      throw new Error(`Optimize must expose only Pi: ${JSON.stringify(providers)}`);
+    }
+    const artifactDir = process.env.PASEO_DESKTOP_SMOKE_ARTIFACT_DIR?.trim();
+    if (artifactDir) {
+      fs.mkdirSync(artifactDir, { recursive: true });
+      await page.screenshot({ path: path.join(artifactDir, "optimize-app.png"), fullPage: true });
+      fs.writeFileSync(
+        path.join(artifactDir, "providers.json"),
+        JSON.stringify(providers, null, 2),
+      );
+    }
     await stopDaemonForCleanup();
     console.log(
       `Packaged desktop smoke passed: real renderer and preload loaded; renderer-started desktop daemon pid ${status.pid}, listen ${status.listen}; CLI shim daemon status and terminal smoke succeeded`,
