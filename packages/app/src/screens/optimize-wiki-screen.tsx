@@ -253,7 +253,7 @@ function WikiLibrary({
           New page
         </Button>
       </View>
-      <View style={styles.searchRow}>
+      <View style={styles.searchRow} testID="wiki-search-row">
         <SearchField
           value={search}
           onChangeText={onSearch}
@@ -274,7 +274,7 @@ function WikiLibrary({
         />
       </ScrollView>
       <View style={styles.pagination}>
-        {list.data && <Text style={styles.muted}>{list.data.total} pages</Text>}
+        {list.data && <Text style={styles.muted}>Pages: {list.data.total}</Text>}
         {offset > 0 && (
           <Button size="sm" variant="ghost" onPress={previous}>
             Previous
