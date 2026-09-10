@@ -138,3 +138,7 @@
 .optimize-wiki-prose .ProseMirror-selectednode {
   outline: 2px solid #e3333f;
 }
+
+.wiki-editor-surface {
+  position: relative;
+}

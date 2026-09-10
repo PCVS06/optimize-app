@@ -834,7 +834,13 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByTestId("wiki-title-input").fill("Product care guide");
   const rich = page.getByTestId("wiki-rich-content");
   await rich.click();
-  await rich.pressSequentially("## Care");
+  await rich.pressSequentially("/heading 2");
+  await page
+    .getByTestId("wiki-slash-menu")
+    .getByRole("button", { name: "Heading 2", exact: true })
+    .waitFor();
+  await rich.press("Enter");
+  await rich.pressSequentially("Care");
   await rich.press("Enter");
   await rich.pressSequentially("Use the approved service guide. WIKI_CONTEXT_718.");
   await page.getByTestId("wiki-cancel").click();

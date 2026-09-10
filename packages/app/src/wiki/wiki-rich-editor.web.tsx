@@ -68,7 +68,7 @@ function applyBlock(editor: Editor, type: string) {
 function slashQuery(editor: Editor) {
   const { $from, empty } = editor.state.selection;
   if (!empty || $from.parent.type.name !== "paragraph") return null;
-  return /^\/([a-z ]*)$/i.exec($from.parent.textBetween(0, $from.parentOffset))?.[1] ?? null;
+  return /^\/([a-z0-9 ]*)$/i.exec($from.parent.textBetween(0, $from.parentOffset))?.[1] ?? null;
 }
 
 export function WikiRichEditor({ initialValue, onChange, disabled, pages }: WikiRichEditorProps) {
@@ -116,6 +116,13 @@ function RichDocument({
     }),
   });
   const [slashIndex, setSlashIndex] = useState(0);
+  const surface = useRef<HTMLDivElement>(null);
+  const [slashDismissed, setSlashDismissed] = useState(false);
+  const [anchor, setAnchor] = useState({ top: 0, left: 0 });
+  useEffect(() => {
+    setSlashDismissed(false);
+    setSlashIndex(0);
+  }, [current.slash]);
   const [linkMode, setLinkMode] = useState<"link" | "image" | null>(null);
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -133,6 +140,18 @@ function RichDocument({
     () => blocks.filter((block) => block.label.toLowerCase().includes(current.slash ?? "")),
     [current.slash],
   );
+  useEffect(() => {
+    if (current.slash === null || !surface.current) return;
+    const caret = editor.view.coordsAtPos(editor.state.selection.from);
+    const bounds = surface.current.getBoundingClientRect();
+    const height = Math.min(360, commands.length * 36 + 48);
+    const below = window.innerHeight - caret.bottom;
+    const top =
+      below < height && caret.top > height
+        ? caret.top - bounds.top - height
+        : caret.bottom - bounds.top + 8;
+    setAnchor({ top, left: Math.max(0, Math.min(caret.left - bounds.left, bounds.width - 300)) });
+  }, [current.slash, editor, commands.length]);
   const chooseBlock = useCallback(
     (type: string) => {
       applyBlock(editor, type);
@@ -167,7 +186,13 @@ function RichDocument({
   );
   const onKey = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (current.slash === null || commands.length === 0) return;
+      if (current.slash === null || commands.length === 0 || slashDismissed) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setSlashDismissed(true);
+        return;
+      }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         event.preventDefault();
         event.stopPropagation();
@@ -181,7 +206,7 @@ function RichDocument({
         chooseSlash(commands[slashIndex % commands.length].value);
       }
     },
-    [commands, current.slash, slashIndex, chooseSlash],
+    [commands, current.slash, slashIndex, chooseSlash, slashDismissed],
   );
   const bold = useCallback(() => {
     editor.chain().focus().toggleBold().run();
@@ -383,25 +408,25 @@ function RichDocument({
           {urlError && <Text style={styles.error}>{urlError}</Text>}
         </View>
       )}
-      <div onKeyDownCapture={onKey}>
+      <div ref={surface} className="wiki-editor-surface" onKeyDownCapture={onKey}>
         <ThemedEditorContent uniProps={editorColors} editor={editor} />
+        {current.slash !== null && commands.length > 0 && !slashDismissed && (
+          <View style={[styles.commands, anchor]} testID="wiki-slash-menu">
+            <Text style={styles.muted}>INSERT A BLOCK</Text>
+            {commands.map((command, index) => (
+              <ChoiceButton
+                key={command.id}
+                size="sm"
+                variant={index === slashIndex % commands.length ? "secondary" : "ghost"}
+                value={command.value}
+                onSelect={chooseSlash}
+              >
+                {command.label}
+              </ChoiceButton>
+            ))}
+          </View>
+        )}
       </div>
-      {current.slash !== null && commands.length > 0 && (
-        <View style={styles.commands} testID="wiki-slash-menu">
-          <Text style={styles.muted}>INSERT A BLOCK</Text>
-          {commands.map((command, index) => (
-            <ChoiceButton
-              key={command.id}
-              size="sm"
-              variant={index === slashIndex % commands.length ? "secondary" : "ghost"}
-              value={command.value}
-              onSelect={chooseSlash}
-            >
-              {command.label}
-            </ChoiceButton>
-          ))}
-        </View>
-      )}
     </View>
   );
 }
@@ -424,7 +449,12 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: 10,
   },
   commands: {
-    maxWidth: 320,
+    position: "absolute",
+    zIndex: 20,
+    width: 300,
+    maxWidth: "100%",
+    maxHeight: 360,
+    overflow: "scroll",
     padding: 12,
     gap: 4,
     backgroundColor: theme.colors.surface1,
