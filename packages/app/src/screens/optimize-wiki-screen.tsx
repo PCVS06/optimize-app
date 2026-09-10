@@ -253,13 +253,15 @@ function WikiLibrary({
           New page
         </Button>
       </View>
-      <SearchField
-        value={search}
-        onChangeText={onSearch}
-        placeholder="Search the Wiki…"
-        clearAccessibilityLabel="Clear Wiki search"
-        testID="wiki-search"
-      />
+      <View style={styles.searchRow}>
+        <SearchField
+          value={search}
+          onChangeText={onSearch}
+          placeholder="Search the Wiki…"
+          clearAccessibilityLabel="Clear Wiki search"
+          testID="wiki-search"
+        />
+      </View>
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
         <WikiList
           pages={list.data?.pages}
@@ -572,6 +574,7 @@ const styles = StyleSheet.create((theme) => ({
     gap: 16,
   },
   libraryCompact: { width: "100%", flex: 1, borderRightWidth: 0 },
+  searchRow: { flexDirection: "row", flexShrink: 0 },
   libraryHeading: { gap: 12, alignItems: "flex-start" },
   eyebrow: {
     color: theme.colors.foregroundMuted,

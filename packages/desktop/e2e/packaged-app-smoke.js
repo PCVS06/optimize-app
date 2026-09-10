@@ -822,6 +822,10 @@ function assertLinuxDesktopIdentity(appPath) {
 async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   // Optimize Wiki: real sidebar navigation, editing, persistence, body search, and reload.
   await page.getByTestId("sidebar-optimize-wiki").click();
+  await page.getByTestId("wiki-new-page").waitFor();
+  const searchBounds = await page.getByTestId("wiki-search").locator("..").boundingBox();
+  if (!searchBounds || searchBounds.height > 56)
+    throw new Error("Wiki search must stay a compact single-line control");
   await page.getByTestId("wiki-new-page").click();
   await page.getByTestId("wiki-title-input").fill("Product care guide");
   await page
