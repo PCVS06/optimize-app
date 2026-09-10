@@ -1,7 +1,13 @@
 {
   "name": "@getpaseo/plugin",
   "version": "0.8.0",
+  "private": true,
   "description": "Paseo plugin SDK package",
+  "homepage": "https://github.com/PCVS06/optimize-app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PCVS06/optimize-app.git"
+  },
   "files": [
     "dist",
     "!dist/**/*.map"

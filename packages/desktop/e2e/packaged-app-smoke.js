@@ -922,6 +922,30 @@ async function smokePackagedDesktopApp({ appPath }) {
         JSON.stringify(providers, null, 2),
       );
     }
+    // Optimize: exercise the actual settings UI against the isolated packaged daemon.
+    await page.getByTestId("sidebar-settings").click();
+    await page.getByTestId("settings-host-section-agents").waitFor({ timeout: 30000 });
+    if (await page.getByTestId("settings-host-section-terminals").isVisible()) {
+      throw new Error("Technical settings must be collapsed by default");
+    }
+    await page.getByTestId("settings-host-section-agents").click();
+    await page.getByTestId("host-page-append-system-prompt-edit").click();
+    const companyInstructions = "Optimize smoke: use the company product catalog.";
+    await page.getByTestId("host-page-append-system-prompt-input").fill(companyInstructions);
+    await page.getByTestId("host-page-append-system-prompt-save").click();
+    await page.getByTestId("host-page-append-system-prompt-sheet").waitFor({ state: "hidden" });
+    const savedConfig = JSON.parse(fs.readFileSync(path.join(daemonHome, "config.json"), "utf8"));
+    if (savedConfig.daemon?.appendSystemPrompt !== companyInstructions) {
+      throw new Error("Company instructions did not persist through the packaged app");
+    }
+    if (artifactDir) {
+      await page.screenshot({
+        path: path.join(artifactDir, "optimize-company-settings.png"),
+        fullPage: true,
+      });
+    }
+    await page.getByTestId("settings-advanced-options").click();
+    await page.getByTestId("settings-host-section-terminals").waitFor();
     await stopDaemonForCleanup();
     console.log(
       `Packaged desktop smoke passed: real renderer and preload loaded; renderer-started desktop daemon pid ${status.pid}, listen ${status.listen}; CLI shim daemon status and terminal smoke succeeded`,

@@ -1,9 +1,12 @@
+import { OptimizeLogo } from "@/components/icons/optimize-logo";
+import { Button } from "@/components/ui/button";
 import {
   memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ComponentType,
   type ReactElement,
 } from "react";
@@ -23,6 +26,7 @@ import { ICON_SIZE, SPACING, type Theme } from "@/styles/theme";
 import {
   useWorkspaceTabLaunchCatalog,
   type WorkspaceTabLaunchItem,
+  type WorkspaceTabLaunchGroup,
 } from "@/workspace-tabs/launcher";
 
 const ThemedPlus = withUnistyles(Plus);
@@ -130,6 +134,9 @@ function useNewTabDescriptor() {
 }
 
 const NewTabPanel = memo(function NewTabPanel(): ReactElement {
+  const { t } = useTranslation();
+  const [showMoreTools, setShowMoreTools] = useState(false);
+  const toggleMoreTools = useCallback(() => setShowMoreTools((value) => !value), []);
   const { host, serverId, tabId } = usePaneContext();
   const { isInteractive, focusPane } = usePaneFocus();
   const containerRef = useRef<View | null>(null);
@@ -142,6 +149,19 @@ const NewTabPanel = memo(function NewTabPanel(): ReactElement {
     () => new Map(groups.flatMap((group) => group.items).map((item) => [item.id, item])),
     [groups],
   );
+  const moreToolsAccessibilityState = useMemo(() => ({ expanded: showMoreTools }), [showMoreTools]);
+  const visibleGroups = useMemo(() => {
+    if (host !== "main" || showMoreTools) return groups;
+    const visible: WorkspaceTabLaunchGroup[] = [];
+    for (const group of groups) {
+      const items =
+        group.id === "plugin-panels"
+          ? group.items
+          : group.items.filter((item) => ["agent", "files", "browser"].includes(item.id));
+      if (items.length > 0) visible.push({ ...group, items });
+    }
+    return visible;
+  }, [groups, host, showMoreTools]);
   const handlesWorkspaceShortcuts = isInteractive && host === "main";
 
   useEffect(() => {
@@ -245,7 +265,14 @@ const NewTabPanel = memo(function NewTabPanel(): ReactElement {
     <View ref={containerRef} style={styles.container} testID="workspace-new-tab-panel">
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.rail}>
-          {groups.map((group) => (
+          {host === "main" ? (
+            <View style={styles.welcome}>
+              <OptimizeLogo size={44} />
+              <Text style={styles.welcomeTitle}>{t("optimize.welcome")}</Text>
+              <Text style={styles.welcomeHint}>{t("optimize.welcomeHint")}</Text>
+            </View>
+          ) : null}
+          {visibleGroups.map((group) => (
             <View key={group.id} style={styles.group}>
               {group.label ? (
                 <View style={styles.groupHeader}>
@@ -263,6 +290,17 @@ const NewTabPanel = memo(function NewTabPanel(): ReactElement {
               ))}
             </View>
           ))}
+          {host === "main" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onPress={toggleMoreTools}
+              accessibilityState={moreToolsAccessibilityState}
+              testID="workspace-more-tools"
+            >
+              {t("optimize.moreTools")}
+            </Button>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -287,7 +325,18 @@ const styles = StyleSheet.create((theme) => ({
   rail: {
     width: "100%",
     maxWidth: LAUNCHER_MAX_WIDTH,
-    gap: theme.spacing[12],
+    gap: theme.spacing[5],
+  },
+  welcome: { gap: theme.spacing[3], marginBottom: theme.spacing[3] },
+  welcomeTitle: {
+    fontSize: theme.fontSize["2xl"],
+    color: theme.colors.foreground,
+    fontWeight: "500",
+  },
+  welcomeHint: {
+    fontSize: theme.fontSize.base,
+    color: theme.colors.foregroundMuted,
+    lineHeight: 22,
   },
   group: {
     gap: theme.spacing[1],

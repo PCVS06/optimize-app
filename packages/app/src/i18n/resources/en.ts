@@ -1,5 +1,28 @@
 export const en = {
   optimize: {
+    reportProblem: "Report a problem",
+    advanced: "Advanced",
+    company: "Optimize",
+    assistant: "Assistant",
+    models: "Models",
+    extensions: "Extensions",
+    projectInstructions: "Project instructions",
+    projectInstructionsHint:
+      "Added to the company instructions for this project. Changes apply to new or reloaded conversations.",
+    projectInstructionsPlaceholder:
+      "Describe this project, its sources, preferred language, and how the assistant should work.",
+    companyInstructions: "Company instructions",
+    companyInstructionsHint:
+      "Shared across projects on this Mac. Changes apply to new or reloaded conversations.",
+    companyInstructionsPlaceholder:
+      "Set the company-wide role, tone, sources, and working rules for the Optimize assistant.",
+    promptSaveFailed: "Instructions could not be saved. Please try again.",
+    welcome: "How can I help?",
+    welcomeHint: "Work on product knowledge, customer support, or daily operations.",
+    newConversation: "Start a conversation",
+    moreTools: "More tools",
+    projects: "Projects",
+
     website: "Optimize website",
     licenses: "Licenses",
     licensesTitle: "Open-source licenses",
@@ -69,8 +92,8 @@ export const en = {
       actions: "Actions",
       files: "Files",
       workspaces: "Workspaces",
-      agents: "Agents",
-      newAgent: "New agent",
+      agents: "Assistant",
+      newAgent: "New conversation",
       open: "Open {{name}}",
       openInSidePane: "Open {{name}} in side pane",
       openInFocusedPane: "Open {{name}} in focused pane",
@@ -585,12 +608,12 @@ export const en = {
       modified: "Unsaved changes",
       loadingAgentTitle: "Loading agent title",
       fallback: {
-        newAgent: "New agent",
+        newAgent: "New conversation",
         setup: "Setup",
         workspaceSetup: "Workspace setup",
         terminal: "Terminal",
         browser: "Browser",
-        agent: "Agent",
+        agent: "Assistant",
         workspace: "Workspace",
       },
       switcher: {
@@ -619,7 +642,7 @@ export const en = {
       },
       actions: {
         newTab: "New tab",
-        newAgent: "New agent",
+        newAgent: "New conversation",
         newTerminal: "New terminal",
         preparingTerminal: "Preparing terminal tab",
         preparingTerminalTooltip: "Preparing terminal...",
@@ -691,7 +714,7 @@ export const en = {
     header: {
       actions: {
         workspaceActions: "Workspace actions",
-        newAgent: "New agent",
+        newAgent: "New conversation",
         newTerminal: "New terminal",
         newBrowser: "New browser tab",
         importSession: "Import session",
@@ -1792,7 +1815,7 @@ export const en = {
   },
   panels: {
     draft: {
-      newAgent: "New Agent",
+      newAgent: "New conversation",
       creatingAgent: "Creating agent",
     },
     file: {
@@ -2002,7 +2025,7 @@ export const en = {
     hostSections: {
       projects: "Projects",
       connections: "Connections",
-      agents: "Agents",
+      agents: "Assistant",
       metadata: "Metadata",
       workspaces: "Workspaces",
       providers: "Providers",

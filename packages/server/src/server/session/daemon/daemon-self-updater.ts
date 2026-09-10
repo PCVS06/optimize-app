@@ -44,7 +44,7 @@ const defaultRuntime: DaemonSelfUpdateRuntime = {
 };
 
 const DESKTOP_MANAGED_UPDATE_ERROR =
-  "This daemon is managed by Paseo Desktop. Update Paseo Desktop on the host.";
+  "This assistant is managed by Optimize. Update Optimize on this Mac.";
 
 export class DaemonSelfUpdater {
   private inProgress = false;

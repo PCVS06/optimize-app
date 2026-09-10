@@ -148,26 +148,32 @@ export const SidebarWorkspaceRowContent = memo(function SidebarWorkspaceRowConte
             loading={isLoading}
             testID={`sidebar-row-project-icon-${workspace.workspaceKey}`}
           />
-        ) : (
-          <WorkspaceStatusIndicator
-            bucket={workspace.statusBucket}
-            workspaceKind={workspace.workspaceKind}
-            loading={isLoading}
-            reserveIdleSpace={reserveIdleStatusIndicatorSpace}
-          />
-        )}
+        ) : null}
+        {!leadingProjectName && reserveIdleStatusIndicatorSpace ? (
+          <View style={styles.workspaceStatusDot} />
+        ) : null}
         <View style={styles.workspaceContentColumn}>
           <View style={styles.workspaceTitleRow}>
             <Text style={workspaceBranchTextStyle} numberOfLines={1}>
               {workspaceLabel}
             </Text>
-            <View style={sidebarWorkspaceRowStyles.rowRight}>{children}</View>
+            <View style={sidebarWorkspaceRowStyles.rowRight}>
+              {!leadingProjectName ? (
+                <WorkspaceStatusIndicator
+                  bucket={workspace.statusBucket}
+                  workspaceKind={workspace.workspaceKind}
+                  loading={isLoading}
+                  reserveIdleSpace={false}
+                />
+              ) : null}
+              {children}
+            </View>
           </View>
           <WorkspaceMetaRow
-            currentBranch={workspace.currentBranch}
+            currentBranch={null}
             projectName={leadingProjectName}
             hostBadge={hostBadge ?? null}
-            prHint={workspace.prHint}
+            prHint={null}
             serviceSummary={serviceSummary}
             labels={labels}
           />
@@ -230,15 +236,7 @@ function WorkspaceStatusIndicator({
   }
 
   if (bucket === "done") {
-    // An idle row still gets a dot rather than an empty slot. Nested rows are marked as
-    // workspaces by indentation alone, and with nothing in the leading slot the rail has no
-    // edge to read against — a workspace carrying its own glyph starts looking like a project
-    // header. The dot is muted to half opacity so it holds the rail without reporting status.
-    return reserveIdleSpace ? (
-      <View style={styles.workspaceStatusDot} testID="workspace-status-indicator-done">
-        <View style={styles.idleStatusDot} />
-      </View>
-    ) : null;
+    return reserveIdleSpace ? <View style={styles.workspaceStatusDot} /> : null;
   }
 
   let KindIcon: typeof ThemedMonitor;
@@ -284,7 +282,7 @@ export const sidebarWorkspaceRowStyles = StyleSheet.create((theme) => ({
   // backgrounds have to keep spanning the group's full width. Indenting the container instead
   // pulls the highlight in with the content and the row stops lining up with its header.
   rowIndented: {
-    paddingLeft: theme.spacing[2] + theme.spacing[2],
+    paddingLeft: theme.spacing[2],
   },
   rowRight: {
     flexDirection: "row",
@@ -452,7 +450,7 @@ const styles = StyleSheet.create((theme) => ({
   workspaceRowMain: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: theme.spacing[2],
+    gap: theme.spacing[3],
     width: "100%",
   },
   workspaceContentColumn: {
@@ -494,21 +492,13 @@ const styles = StyleSheet.create((theme) => ({
     borderRadius: theme.borderRadius.full,
     backgroundColor: getStatusDotColor({ theme, bucket: "attention" }) ?? undefined,
   },
-  idleStatusDot: {
-    width: STATUS_INDICATOR_FILLED_DOT_SIZE,
-    height: STATUS_INDICATOR_FILLED_DOT_SIZE,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.foregroundExtraMuted,
-    opacity: 0.3,
-  },
   // The title owns the first line outright now that the host, change request and CI moved
   // to the meta row, so it takes the full width the trailing slot leaves behind.
   workspaceBranchText: {
     color: theme.colors.foreground,
-    fontSize: theme.fontSize.base,
+    fontSize: theme.fontSize.lg,
     fontWeight: "400",
-    lineHeight: 20,
-    opacity: 0.76,
+    lineHeight: 22,
     flex: 1,
     minWidth: 0,
   },

@@ -1,3 +1,4 @@
+import { AdvancedOptions } from "@/components/advanced-options";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -685,6 +686,10 @@ function ProjectConfigForm({
     [t],
   );
 
+  const handleSystemPromptChange = useCallback((systemPrompt: string) => {
+    setDraft((current) => ({ ...current, systemPrompt }));
+  }, []);
+
   const isStale = writeError?.code === "stale_project_config";
   const isWriteFailed = writeError?.code === "write_failed";
   const saveDisabled = saveMutation.isPending || isStale || hasInvalidScripts;
@@ -692,87 +697,101 @@ function ProjectConfigForm({
   return (
     <View>
       <SettingsGroup
-        title={t("settings.project.worktree.title")}
-        info={t("settings.project.worktree.info")}
-        testID="worktree-group"
+        title={t("optimize.projectInstructions")}
+        info={t("optimize.projectInstructionsHint")}
       >
-        <SettingsSection
-          title={t("settings.project.worktree.setup")}
-          testID="worktree-setup-section"
-          trailing={setupDocsLink}
-        >
-          {hasUncommittedWorktreeSetupChanges ? (
-            <Alert
-              variant="warning"
-              title={t("settings.project.worktree.uncommittedTitle")}
-              description={t("settings.project.worktree.uncommittedDescription")}
-            />
-          ) : null}
-          <SettingsTextAreaCard
-            testID="worktree-setup-input"
-            accessibilityLabel={t("settings.project.worktree.setupAccessibility")}
-            value={draft.setupText}
-            onChangeText={handleSetupChange}
-            placeholder="npm install"
-          />
-        </SettingsSection>
-
-        <SettingsSection
-          title={t("settings.project.worktree.teardown")}
-          testID="worktree-teardown-section"
-          trailing={teardownDocsLink}
-          flush
-        >
-          <SettingsTextAreaCard
-            testID="worktree-teardown-input"
-            accessibilityLabel={t("settings.project.worktree.teardownAccessibility")}
-            value={draft.teardownText}
-            onChangeText={handleTeardownChange}
-            placeholder="docker compose down"
-          />
-        </SettingsSection>
+        <SettingsTextAreaCard
+          testID="project-system-prompt-input"
+          accessibilityLabel={t("optimize.projectInstructions")}
+          value={draft.systemPrompt}
+          onChangeText={handleSystemPromptChange}
+          placeholder={t("optimize.projectInstructionsPlaceholder")}
+        />
       </SettingsGroup>
-
-      <SettingsGroup
-        title={t("settings.project.scripts.title")}
-        info={t("settings.project.scripts.info")}
-        trailing={scriptsTrailing}
-        testID="scripts-group"
-      >
-        <View style={settingsStyles.card} testID="scripts-list">
-          {draft.scripts.length === 0 ? (
-            <View style={settingsStyles.row}>
-              <Text style={styles.emptyScripts}>{t("settings.project.scripts.empty")}</Text>
-            </View>
-          ) : (
-            draft.scripts.map((script, index) => (
-              <ScriptRow
-                key={script.id}
-                script={script}
-                isFirst={index === 0}
-                onEdit={handleEditScript}
-                onRemove={handleRemoveScript}
+      <AdvancedOptions testID="project-advanced-options">
+        <SettingsGroup
+          title={t("settings.project.worktree.title")}
+          info={t("settings.project.worktree.info")}
+          testID="worktree-group"
+        >
+          <SettingsSection
+            title={t("settings.project.worktree.setup")}
+            testID="worktree-setup-section"
+            trailing={setupDocsLink}
+          >
+            {hasUncommittedWorktreeSetupChanges ? (
+              <Alert
+                variant="warning"
+                title={t("settings.project.worktree.uncommittedTitle")}
+                description={t("settings.project.worktree.uncommittedDescription")}
               />
-            ))
-          )}
-        </View>
-      </SettingsGroup>
+            ) : null}
+            <SettingsTextAreaCard
+              testID="worktree-setup-input"
+              accessibilityLabel={t("settings.project.worktree.setupAccessibility")}
+              value={draft.setupText}
+              onChangeText={handleSetupChange}
+              placeholder="npm install"
+            />
+          </SettingsSection>
 
-      <SettingsGroup
-        title={t("settings.project.metadata.title")}
-        info={t("settings.project.metadata.info")}
-        testID="metadata-group"
-      >
-        {METADATA_PROMPT_KEYS.map((key, index) => (
-          <MetadataPromptSection
-            key={key}
-            promptKey={key}
-            value={draft.metadataPrompts[key]}
-            onChange={handleMetadataPromptChange}
-            flush={index === METADATA_PROMPT_KEYS.length - 1}
-          />
-        ))}
-      </SettingsGroup>
+          <SettingsSection
+            title={t("settings.project.worktree.teardown")}
+            testID="worktree-teardown-section"
+            trailing={teardownDocsLink}
+            flush
+          >
+            <SettingsTextAreaCard
+              testID="worktree-teardown-input"
+              accessibilityLabel={t("settings.project.worktree.teardownAccessibility")}
+              value={draft.teardownText}
+              onChangeText={handleTeardownChange}
+              placeholder="docker compose down"
+            />
+          </SettingsSection>
+        </SettingsGroup>
+
+        <SettingsGroup
+          title={t("settings.project.scripts.title")}
+          info={t("settings.project.scripts.info")}
+          trailing={scriptsTrailing}
+          testID="scripts-group"
+        >
+          <View style={settingsStyles.card} testID="scripts-list">
+            {draft.scripts.length === 0 ? (
+              <View style={settingsStyles.row}>
+                <Text style={styles.emptyScripts}>{t("settings.project.scripts.empty")}</Text>
+              </View>
+            ) : (
+              draft.scripts.map((script, index) => (
+                <ScriptRow
+                  key={script.id}
+                  script={script}
+                  isFirst={index === 0}
+                  onEdit={handleEditScript}
+                  onRemove={handleRemoveScript}
+                />
+              ))
+            )}
+          </View>
+        </SettingsGroup>
+
+        <SettingsGroup
+          title={t("settings.project.metadata.title")}
+          info={t("settings.project.metadata.info")}
+          testID="metadata-group"
+        >
+          {METADATA_PROMPT_KEYS.map((key, index) => (
+            <MetadataPromptSection
+              key={key}
+              promptKey={key}
+              value={draft.metadataPrompts[key]}
+              onChange={handleMetadataPromptChange}
+              flush={index === METADATA_PROMPT_KEYS.length - 1}
+            />
+          ))}
+        </SettingsGroup>
+      </AdvancedOptions>
 
       {isStale ? (
         <View style={styles.calloutWrap}>

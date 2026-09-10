@@ -1,3 +1,4 @@
+import { AdvancedOptions } from "@/components/advanced-options";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
@@ -33,6 +34,7 @@ import {
   Puzzle,
   Plus,
   FolderGit2,
+  FolderOpen,
   SquareTerminal,
   Code2,
   Smartphone,
@@ -190,16 +192,16 @@ interface HostSectionItem {
 
 const HOST_SECTION_ITEMS: HostSectionItem[] = [
   { id: "host", labelKey: "settings.hostSections.host", icon: Server },
-  { id: "projects", labelKey: "settings.hostSections.projects", icon: FolderGit2 },
+  { id: "projects", labelKey: "settings.hostSections.projects", icon: FolderOpen },
   { id: "connections", labelKey: "settings.hostSections.connections", icon: Network },
   { id: "pair-device", labelKey: "openProject.tiles.pairDevice.title", icon: Smartphone },
-  { id: "agents", labelKey: "settings.hostSections.agents", icon: Bot },
+  { id: "agents", labelKey: "optimize.assistant", icon: Bot },
   { id: "metadata", labelKey: "settings.hostSections.metadata", icon: Sparkles },
   { id: "workspaces", labelKey: "settings.hostSections.workspaces", icon: FolderGit2 },
-  { id: "providers", labelKey: "settings.hostSections.providers", icon: Boxes },
+  { id: "providers", labelKey: "optimize.models", icon: Boxes },
   { id: "usage", labelKey: "settings.hostSections.usage", icon: Gauge },
   { id: "terminals", labelKey: "settings.hostSections.terminals", icon: SquareTerminal },
-  { id: "plugins", labelKey: "settings.hostSections.plugins", icon: Blocks },
+  { id: "plugins", labelKey: "optimize.extensions", icon: Blocks },
 ];
 
 function renderHostSettingsContent(
@@ -1101,33 +1103,49 @@ function SettingsSidebar({
   if (view.kind === "project") selectedHostSection = "projects";
   if (view.kind === "plugin") selectedHostSection = "plugins";
 
+  const appBasics = new Set<SettingsSectionSlug>([
+    "general",
+    "appearance",
+    "notifications",
+    "about",
+  ]);
+  const companyBasics = new Set<HostSectionSlug>(["agents", "projects", "providers", "plugins"]);
+  const activeAdvanced = Boolean(
+    (selectedSectionId && !appBasics.has(selectedSectionId)) ||
+    (selectedHostSection && !companyBasics.has(selectedHostSection)),
+  );
+
   const sidebarBody = (
     <>
       <View style={sidebarStyles.list}>
         <Text style={sidebarStyles.groupLabel}>{t("settings.groups.app")}</Text>
-        {items.map((item) => (
-          <SidebarSectionButton
-            key={item.id}
-            itemId={item.id}
-            label={t(item.labelKey)}
-            icon={item.icon}
-            isSelected={selectedSectionId === item.id}
-            onSelect={onSelectSection}
-          />
-        ))}
+        {items
+          .filter((item) => appBasics.has(item.id))
+          .map((item) => (
+            <SidebarSectionButton
+              key={item.id}
+              itemId={item.id}
+              label={t(item.labelKey)}
+              icon={item.icon}
+              isSelected={selectedSectionId === item.id}
+              onSelect={onSelectSection}
+            />
+          ))}
       </View>
       <SidebarSeparator />
       {hasHosts ? (
         <View style={sidebarStyles.list}>
-          <Text style={sidebarStyles.groupLabel}>{t("settings.groups.host")}</Text>
-          <HostPicker
-            activeServerId={activeHostServerId}
-            sortedHosts={sortedHosts}
-            onSelectHost={onSelectHost}
-            onAddHost={onAddHost}
-            enableBuiltInDaemonOption={enableBuiltInDaemonOption}
-          />
-          {HOST_SECTION_ITEMS.map((item) => (
+          <Text style={sidebarStyles.groupLabel}>{t("optimize.company")}</Text>
+          {sortedHosts.length > 1 ? (
+            <HostPicker
+              activeServerId={activeHostServerId}
+              sortedHosts={sortedHosts}
+              onSelectHost={onSelectHost}
+              onAddHost={onAddHost}
+              enableBuiltInDaemonOption={enableBuiltInDaemonOption}
+            />
+          ) : null}
+          {HOST_SECTION_ITEMS.filter((item) => companyBasics.has(item.id)).map((item) => (
             <SidebarHostSectionButton
               key={item.id}
               itemId={item.id}
@@ -1168,6 +1186,43 @@ function SettingsSidebar({
           ) : null}
         </View>
       )}
+      <View style={sidebarStyles.list}>
+        <AdvancedOptions forceOpen={activeAdvanced} testID="settings-advanced-options">
+          {items
+            .filter((item) => !appBasics.has(item.id))
+            .map((item) => (
+              <SidebarSectionButton
+                key={item.id}
+                itemId={item.id}
+                label={t(item.labelKey)}
+                icon={item.icon}
+                isSelected={selectedSectionId === item.id}
+                onSelect={onSelectSection}
+              />
+            ))}
+          {hasHosts ? (
+            <>
+              <HostPicker
+                activeServerId={activeHostServerId}
+                sortedHosts={sortedHosts}
+                onSelectHost={onSelectHost}
+                onAddHost={onAddHost}
+                enableBuiltInDaemonOption={enableBuiltInDaemonOption}
+              />
+              {HOST_SECTION_ITEMS.filter((item) => !companyBasics.has(item.id)).map((item) => (
+                <SidebarHostSectionButton
+                  key={item.id}
+                  itemId={item.id}
+                  label={t(item.labelKey)}
+                  icon={item.icon}
+                  isSelected={selectedHostSection === item.id}
+                  onSelect={onSelectHostSection}
+                />
+              ))}
+            </>
+          ) : null}
+        </AdvancedOptions>
+      </View>
     </>
   );
 

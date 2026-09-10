@@ -40,7 +40,7 @@ publish:
 mac:
   artifactName: "Optimize-${version}-${arch}.${ext}"
   minimumSystemVersion: "13.0.0"
-  category: public.app-category.developer-tools
+  category: public.app-category.productivity
   icon: assets/icon.icns
   hardenedRuntime: true
   notarize: true
@@ -55,7 +55,7 @@ mac:
     - dmg
     - zip
 linux:
-  category: Development
+  category: Office
   icon: assets
   artifactName: "Optimize-${version}-${arch}.${ext}"
   maintainer: "Mohamed Boudra <hello@moboudra.com>"

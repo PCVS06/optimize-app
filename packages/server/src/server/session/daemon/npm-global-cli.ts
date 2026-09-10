@@ -5,7 +5,6 @@ import { execCommand } from "../../../utils/spawn.js";
 export const PASEO_CLI_PACKAGE = "@getpaseo/cli";
 
 const NPM_PROBE_TIMEOUT_MS = 10_000;
-const NPM_INSTALL_TIMEOUT_MS = 300_000;
 const NPM_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 
 const NpmGlobalListSchema = z
@@ -137,9 +136,11 @@ export class DefaultNpmGlobalPaseoCli implements NpmGlobalPaseoCli {
   }
 
   installLatest(): Promise<CommandResult> {
-    return this.runCommand("npm", ["install", "-g", `${PASEO_CLI_PACKAGE}@latest`], {
-      timeout: NPM_INSTALL_TIMEOUT_MS,
-      maxBuffer: NPM_MAX_BUFFER_BYTES,
+    // Optimize is distributed with its desktop app; npm must never replace it with upstream.
+    return Promise.resolve({
+      exitCode: 1,
+      stdout: "",
+      stderr: "Update Optimize through the app or https://github.com/PCVS06/optimize-app/releases.",
     });
   }
 }

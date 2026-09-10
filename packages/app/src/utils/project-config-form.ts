@@ -21,6 +21,7 @@ export interface ProjectScriptDraft {
 }
 
 export interface ProjectConfigDraft {
+  systemPrompt: string;
   setupText: string;
   setupOriginalKind: LifecycleOriginalKind;
   teardownText: string;
@@ -136,6 +137,7 @@ export function configToDraft(config: PaseoConfigRaw | null | undefined): Projec
   }
 
   return {
+    systemPrompt: config?.systemPrompt ?? "",
     setupText: setup.text,
     setupOriginalKind: setup.kind,
     teardownText: teardown.text,
@@ -227,6 +229,11 @@ export function applyDraftToConfig(input: ApplyDraftInput): PaseoConfigRaw {
   }
 
   const result: Record<string, unknown> = { ...baseConfig };
+  if (input.draft.systemPrompt.trim()) {
+    result.systemPrompt = input.draft.systemPrompt;
+  } else {
+    delete result.systemPrompt;
+  }
   if (Object.keys(nextWorktree).length === 0) {
     delete result.worktree;
   } else {

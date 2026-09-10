@@ -108,7 +108,7 @@ describe("DaemonSelfUpdater", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "This daemon is managed by Paseo Desktop. Update Paseo Desktop on the host.",
+      error: "This assistant is managed by Optimize. Update Optimize on this Mac.",
       newVersion: null,
     });
     expect(phases).toEqual([]);

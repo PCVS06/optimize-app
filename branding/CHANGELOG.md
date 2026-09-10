@@ -1,3 +1,15 @@
+# Optimize changes
+
+## Company workspace update
+
+- Cleaner project groups, outline icons, and indented conversations.
+- Optimize branding in conversation tabs, the model picker, and the working animation.
+- Company instructions and project-specific instructions that follow the saved project.
+- Everyday settings separated from advanced tools and connection settings.
+- Conversation-first welcome screen, with terminal tools under More tools.
+- Smaller help menu, with support and updates routed to the Optimize repository.
+- Separate internal review builds and signed customer-release workflow.
+
 # Optimize updates
 
 ## 0.8.0 - 2026-09-10

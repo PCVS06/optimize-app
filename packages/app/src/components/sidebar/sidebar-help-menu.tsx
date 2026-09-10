@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
-import { Activity, CircleHelp, Gift, Keyboard, Globe } from "lucide-react-native";
+import { CircleHelp, Gift, Keyboard, Globe } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import { GitHubIcon } from "@/components/icons/github-icon";
@@ -14,13 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAppDiagnosticStore } from "@/diagnostics/store";
 import { useKeyboardShortcutsAvailable } from "@/keyboard/availability";
-import { useHostRuntimeIsConnected, useHosts } from "@/runtime/host-runtime";
 import { useKeyboardShortcutsStore } from "@/stores/keyboard-shortcuts-store";
-import { useSessionStore } from "@/stores/session-store";
 import { ICON_SIZE, type Theme } from "@/styles/theme";
-import type { HostProfile } from "@/types/host-connection";
 import { formatVersionWithPrefix } from "@/desktop/updates/desktop-updates";
 import { resolveAppVersion } from "@/utils/app-version";
 import { openChangelog } from "@/changelog";
@@ -28,7 +24,6 @@ import { openExternalUrl } from "@/utils/open-external-url";
 
 const COMPANY_URL = "https://www.optimize.bike/";
 const GITHUB_ISSUE_URL = "https://github.com/PCVS06/optimize-app/issues/new";
-const ThemedActivity = withUnistyles(Activity);
 const ThemedCircleHelp = withUnistyles(CircleHelp);
 const ThemedGift = withUnistyles(Gift);
 const ThemedKeyboard = withUnistyles(Keyboard);
@@ -38,9 +33,6 @@ const foregroundColorMapping = (theme: Theme) => ({ color: theme.colors.foregrou
 const foregroundMutedColorMapping = (theme: Theme) => ({
   color: theme.colors.foregroundMuted,
 });
-const diagnosticLeadingIcon = (
-  <ThemedActivity size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
-);
 const shortcutsLeadingIcon = (
   <ThemedKeyboard size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
 );
@@ -54,35 +46,12 @@ const changelogLeadingIcon = (
   <ThemedGift size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
 );
 
-function HostVersionHint({ host }: { host: HostProfile }) {
-  const { t } = useTranslation();
-  const isConnected = useHostRuntimeIsConnected(host.serverId);
-  const daemonVersion = useSessionStore(
-    (state) => state.sessions[host.serverId]?.serverInfo?.version ?? null,
-  );
-  const version = isConnected
-    ? formatVersionWithPrefix(daemonVersion)
-    : t("settings.about.offline");
-
-  return (
-    <DropdownMenuHint
-      style={styles.versionHint}
-      trailing={version}
-      testID={`sidebar-help-host-version-${host.serverId}`}
-    >
-      {host.label}
-    </DropdownMenuHint>
-  );
-}
-
 export function SidebarHelpMenu() {
   const { t } = useTranslation();
   const shortcutsAvailable = useKeyboardShortcutsAvailable();
-  const openAppDiagnostic = useAppDiagnosticStore((state) => state.open);
   const setShortcutsDialogOpen = useKeyboardShortcutsStore((state) => state.setShortcutsDialogOpen);
   const [open, setOpen] = useState(false);
   const version = formatVersionWithPrefix(resolveAppVersion());
-  const hosts = useHosts();
 
   const openKeyboardShortcuts = useCallback(() => {
     setShortcutsDialogOpen(true);
@@ -139,15 +108,6 @@ export function SidebarHelpMenu() {
           {t("sidebar.help.whatsNew")}
         </DropdownMenuItem>
         <DropdownMenuItem
-          testID="sidebar-help-diagnostics"
-          leading={diagnosticLeadingIcon}
-          onSelect={openAppDiagnostic}
-        >
-          {t("sidebar.help.diagnostics")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t("sidebar.help.reportIssue")}</DropdownMenuLabel>
-        <DropdownMenuItem
           testID="sidebar-help-website"
           leading={websiteLeadingIcon}
           onSelect={openCompanyWebsite}
@@ -159,7 +119,7 @@ export function SidebarHelpMenu() {
           leading={githubLeadingIcon}
           onSelect={openGitHubIssue}
         >
-          {t("sidebar.help.github")}
+          {t("optimize.reportProblem")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <View style={styles.versionList}>
@@ -170,9 +130,6 @@ export function SidebarHelpMenu() {
           >
             {t("sidebar.help.appName")}
           </DropdownMenuHint>
-          {hosts.map((host) => (
-            <HostVersionHint key={host.serverId} host={host} />
-          ))}
         </View>
       </DropdownMenuContent>
     </DropdownMenu>

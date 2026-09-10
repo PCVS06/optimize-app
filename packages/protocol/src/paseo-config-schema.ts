@@ -73,6 +73,8 @@ export const PaseoMetadataGenerationSchema = z
 
 export const PaseoConfigRawSchema = z
   .object({
+    // Optimize: optional project instructions; older clients preserve this field.
+    systemPrompt: z.string().optional(),
     worktree: PaseoWorktreeConfigRawSchema.optional(),
     scripts: z.record(z.string(), PaseoScriptEntryRawSchema).optional(),
     metadataGeneration: PaseoMetadataGenerationSchema.optional(),

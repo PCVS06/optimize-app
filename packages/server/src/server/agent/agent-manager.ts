@@ -1,3 +1,4 @@
+import { composeOptimizeInstructions } from "../optimize-project-instructions.js";
 import type { PluginLifecycle } from "../plugins/lifecycle/index.js";
 import { describeHookAgent, publishAgentStream } from "../plugins/lifecycle/index.js";
 import type { PluginSessionOpenRequest } from "@getpaseo/plugin/server";
@@ -305,6 +306,7 @@ export interface AgentManagerOptions {
   paseoToolCatalogFactory?: PaseoToolCatalogFactory;
   resolvePaseoToolPolicy?: (provider: AgentProvider) => ProviderPaseoToolsPolicy | undefined;
   appendSystemPrompt?: string;
+  resolveProjectSystemPrompt?: (workspaceId: string | undefined) => Promise<string | undefined>;
   agentStreamCoalesceWindowMs?: number;
   rescueTimeouts?: AgentManagerRescueTimeouts;
   beforeSteerUnavailableFallback?: (input: {
@@ -722,6 +724,7 @@ export class AgentManager {
     provider: AgentProvider,
   ) => ProviderPaseoToolsPolicy | undefined;
   private appendSystemPrompt: string;
+  private readonly resolveProjectSystemPrompt: AgentManagerOptions["resolveProjectSystemPrompt"];
   private onAgentAttention?: AgentAttentionCallback;
   private onAgentArchived?: AgentArchivedCallback;
   private onWorkspaceStateMayHaveChanged?: (params: { cwd: string }) => void;
@@ -742,6 +745,7 @@ export class AgentManager {
     this.configurePaseoTools(options);
     this.resolvePaseoToolPolicy = options.resolvePaseoToolPolicy ?? (() => undefined);
     this.appendSystemPrompt = options.appendSystemPrompt ?? "";
+    this.resolveProjectSystemPrompt = options.resolveProjectSystemPrompt;
     this.logger = options.logger.child({ module: "agent", component: "agent-manager" });
     this.rescueTimeouts = {
       reloadSessionCloseMs:
@@ -1225,6 +1229,7 @@ export class AgentManager {
       config,
       resolvedAgentId,
       options?.env,
+      options.workspaceId,
     );
     this.requireEnabledProvider(storedConfig.provider);
     const client = await this.requireAvailableClient({
@@ -1315,6 +1320,8 @@ export class AgentManager {
     const { storedConfig, launchConfig, paseoToolPolicy } = await this.prepareSessionConfig(
       mergedConfig,
       resolvedAgentId,
+      undefined,
+      options?.workspaceId,
     );
 
     const client = this.requireClient(handle.provider);
@@ -1383,6 +1390,8 @@ export class AgentManager {
         cwd: input.cwd,
       },
       resolvedAgentId,
+      undefined,
+      input.workspaceId,
     );
     this.paseoToolPolicies.set(resolvedAgentId, paseoToolPolicy);
     const launchContext = await this.buildLaunchContext(
@@ -1477,6 +1486,8 @@ export class AgentManager {
     const { storedConfig, launchConfig, paseoToolPolicy } = await this.prepareSessionConfig(
       refreshConfig,
       agentId,
+      undefined,
+      existing.workspaceId,
     );
     const hadPreviousPaseoToolPolicy = this.paseoToolPolicies.has(agentId);
     const previousPaseoToolPolicy = this.paseoToolPolicies.get(agentId);
@@ -5038,11 +5049,13 @@ export class AgentManager {
     config: AgentSessionConfig,
     agentId: string,
     env?: Record<string, string>,
+    workspaceId?: string,
   ): Promise<PreparedSessionConfig> {
     const storedConfig = await this.normalizeConfig(stripInternalPaseoMcpServer(config), { env });
     const paseoToolPolicy = this.paseoToolsEnabled
       ? this.resolvePaseoToolPolicy(storedConfig.provider)
       : { enabled: false };
+    const projectPrompt = await this.resolveProjectSystemPrompt?.(workspaceId);
     const launchConfig = this.applyDaemonAppendSystemPrompt(
       withRuntimePaseoMcpServer({
         config: storedConfig,
@@ -5053,12 +5066,19 @@ export class AgentManager {
             : null,
         mcpAuthToken: this.mcpAuthToken,
       }),
+      projectPrompt,
     );
     return { storedConfig, launchConfig, paseoToolPolicy };
   }
 
-  private applyDaemonAppendSystemPrompt(config: AgentSessionConfig): AgentSessionConfig {
-    const daemonAppendSystemPrompt = this.appendSystemPrompt.trim();
+  private applyDaemonAppendSystemPrompt(
+    config: AgentSessionConfig,
+    projectPrompt?: string,
+  ): AgentSessionConfig {
+    const daemonAppendSystemPrompt = composeOptimizeInstructions({
+      company: this.appendSystemPrompt,
+      project: projectPrompt,
+    });
     const next = { ...config };
     delete next.daemonAppendSystemPrompt;
 

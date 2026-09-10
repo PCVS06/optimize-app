@@ -56,31 +56,16 @@ describe("DefaultNpmGlobalPaseoCli", () => {
     ]);
   });
 
-  test("runs the global install command for the latest cli", async () => {
+  test("never replaces Optimize with the upstream npm package", async () => {
     const calls: CommandCall[] = [];
-    const cli = new DefaultNpmGlobalPaseoCli(async (command, args, options) => {
-      calls.push({
-        command,
-        args,
-        timeout: options?.timeout,
-        maxBuffer: options?.maxBuffer,
-      });
-      return { exitCode: 0, stdout: "changed 42 packages", stderr: "" };
+    const cli = new DefaultNpmGlobalPaseoCli(async (command, args) => {
+      calls.push({ command, args });
+      return { exitCode: 0, stdout: "", stderr: "" };
     });
-
-    await expect(cli.installLatest()).resolves.toEqual({
-      exitCode: 0,
-      stdout: "changed 42 packages",
-      stderr: "",
-    });
-    expect(calls).toEqual([
-      {
-        command: "npm",
-        args: ["install", "-g", "@getpaseo/cli@latest"],
-        timeout: 300_000,
-        maxBuffer: 10 * 1024 * 1024,
-      },
-    ]);
+    const result = await cli.installLatest();
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("PCVS06/optimize-app/releases");
+    expect(calls).toEqual([]);
   });
 
   test("reports missing npm when npm exits without JSON", async () => {

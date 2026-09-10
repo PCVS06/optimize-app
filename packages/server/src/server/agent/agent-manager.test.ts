@@ -2151,6 +2151,48 @@ test("daemon append system prompt is injected into Pi configs", async () => {
   expect(client.createdConfigs[0]?.daemonAppendSystemPrompt).toBe("Daemon instructions.");
 });
 
+test("Optimize company and project instructions refresh on create, reload, and resume without persisting a stale prompt", async () => {
+  const workdir = mkdtempSync(join(tmpdir(), "optimize-agent-instructions-"));
+  const storage = new AgentStorage(join(workdir, "agents"), logger);
+  const client = new TestAgentClient();
+  let projectPrompt = "First project instructions.";
+  const requestedWorkspaces: Array<string | undefined> = [];
+  const manager = new AgentManager({
+    clients: { codex: client },
+    registry: storage,
+    logger,
+    appendSystemPrompt: "Company instructions.",
+    resolveProjectSystemPrompt: async (workspaceId) => {
+      requestedWorkspaces.push(workspaceId);
+      return workspaceId === "support-chat" ? projectPrompt : undefined;
+    },
+  });
+  const agent = await manager.createAgent({ provider: "codex", cwd: workdir }, undefined, {
+    workspaceId: "support-chat",
+  });
+  expect(client.createdConfigs[0]?.daemonAppendSystemPrompt).toContain("Company instructions.");
+  expect(client.createdConfigs[0]?.daemonAppendSystemPrompt).toContain(projectPrompt);
+  expect((await storage.get(agent.id))?.config).not.toHaveProperty("daemonAppendSystemPrompt");
+  projectPrompt = "Revised project instructions.";
+  manager.setAppendSystemPrompt("Revised company instructions.");
+  await manager.reloadAgentSession(agent.id);
+  expect(client.resumeOverrides.at(-1)?.daemonAppendSystemPrompt).toContain(projectPrompt);
+  expect(client.resumeOverrides.at(-1)?.daemonAppendSystemPrompt).toContain(
+    "Revised company instructions.",
+  );
+  expect(client.resumeOverrides.at(-1)?.daemonAppendSystemPrompt).not.toContain(
+    "First project instructions.",
+  );
+  await manager.resumeAgentFromPersistence(
+    { provider: "codex", sessionId: "reopened" },
+    { cwd: workdir },
+    undefined,
+    { workspaceId: "support-chat" },
+  );
+  expect(client.resumeOverrides.at(-1)?.daemonAppendSystemPrompt).toContain(projectPrompt);
+  expect(requestedWorkspaces).toEqual(["support-chat", "support-chat", "support-chat"]);
+});
+
 test("setAgentMode persists the selected mode across session reload", async () => {
   const workdir = mkdtempSync(join(tmpdir(), "agent-manager-test-"));
   const storagePath = join(workdir, "agents");

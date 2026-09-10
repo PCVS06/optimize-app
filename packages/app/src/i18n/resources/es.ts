@@ -3,6 +3,29 @@ import { pluginSettings } from "./plugin-settings";
 
 export const es: TranslationResources = {
   optimize: {
+    reportProblem: "Report a problem",
+    advanced: "Advanced",
+    company: "Optimize",
+    assistant: "Assistant",
+    models: "Models",
+    extensions: "Extensions",
+    projectInstructions: "Project instructions",
+    projectInstructionsHint:
+      "Added to the company instructions for this project. Changes apply to new or reloaded conversations.",
+    projectInstructionsPlaceholder:
+      "Describe this project, its sources, preferred language, and how the assistant should work.",
+    companyInstructions: "Company instructions",
+    companyInstructionsHint:
+      "Shared across projects on this Mac. Changes apply to new or reloaded conversations.",
+    companyInstructionsPlaceholder:
+      "Set the company-wide role, tone, sources, and working rules for the Optimize assistant.",
+    promptSaveFailed: "Instructions could not be saved. Please try again.",
+    welcome: "How can I help?",
+    welcomeHint: "Work on product knowledge, customer support, or daily operations.",
+    newConversation: "Start a conversation",
+    moreTools: "More tools",
+    projects: "Projects",
+
     website: "Sitio de Optimize",
     licenses: "Licencias",
     licensesTitle: "Licencias de código abierto",

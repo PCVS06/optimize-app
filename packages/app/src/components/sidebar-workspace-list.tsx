@@ -2517,7 +2517,7 @@ const styles = StyleSheet.create((theme) => ({
   // the rows underneath the header, so a collapsed project gives it back and a column of collapsed
   // headers closes up to the pitch of a list instead of staying spaced for content that is gone.
   projectBlockExpanded: {
-    paddingBottom: theme.spacing[3],
+    paddingBottom: theme.spacing[4],
   },
   workspaceListContainer: {},
   // Kept in step with `workspaceRow` above. It stands in a project's list where a workspace row
@@ -2527,7 +2527,7 @@ const styles = StyleSheet.create((theme) => ({
   // the step in reads as belonging to that project. Padding rather than margin, so the hover and
   // pressed fills stay the same box as every other row in the sidebar.
   newWorkspaceGhostRow: {
-    minHeight: 36,
+    minHeight: 40,
     marginBottom: theme.spacing[0.5],
     paddingVertical: theme.spacing[2],
     paddingLeft: theme.spacing[4],
@@ -2567,7 +2567,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   projectRow: {
     position: "relative",
-    minHeight: 36,
+    minHeight: 40,
     paddingVertical: theme.spacing[2],
     paddingHorizontal: theme.spacing[2],
     borderRadius: theme.borderRadius.lg,
@@ -2595,7 +2595,7 @@ const styles = StyleSheet.create((theme) => ({
   projectRowLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing[2],
+    gap: theme.spacing[3],
     flex: 1,
     minWidth: 0,
   },
@@ -2607,8 +2607,8 @@ const styles = StyleSheet.create((theme) => ({
     minWidth: 0,
   },
   projectTitle: {
-    color: theme.colors.foregroundMuted,
-    fontSize: theme.fontSize.base,
+    color: theme.colors.foreground,
+    fontSize: theme.fontSize.lg,
     fontWeight: "400",
     minWidth: 0,
     flexShrink: 1,
@@ -2689,7 +2689,7 @@ const styles = StyleSheet.create((theme) => ({
     right: theme.spacing[2],
   },
   workspaceRow: {
-    minHeight: 36,
+    minHeight: 40,
     marginBottom: theme.spacing[0.5],
     paddingVertical: theme.spacing[2],
     paddingLeft: theme.spacing[2],

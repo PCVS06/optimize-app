@@ -1,6 +1,7 @@
 {
   "name": "@getpaseo/expo-two-way-audio",
   "version": "0.8.0",
+  "private": true,
   "description": "Native module for two way audio streaming",
   "keywords": [
     "ExpoTwoWayAudio",
@@ -8,13 +9,16 @@
     "expo-two-way-audio",
     "react-native"
   ],
-  "homepage": "https://github.com/boudra/expo-two-way-audio",
+  "homepage": "https://github.com/PCVS06/optimize-app",
   "bugs": {
     "url": "https://github.com/speechmatics/expo-two-way-audio/issues"
   },
   "license": "MIT",
   "author": "Speechmatics <devrel@speechmatics.com> (https://github.com/speechmatics)",
-  "repository": "https://github.com/boudra/expo-two-way-audio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PCVS06/optimize-app.git"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {

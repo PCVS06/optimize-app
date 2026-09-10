@@ -1,3 +1,4 @@
+import { readOptimizeProjectInstructions } from "./optimize-project-instructions.js";
 import { describeHookWorkspace } from "./plugins/lifecycle/index.js";
 import express from "express";
 import { createServer as createHTTPServer, type IncomingMessage, type ServerResponse } from "http";
@@ -925,6 +926,14 @@ export async function createPaseoDaemon(
     providerDefinitions: initialAgentManagerState.providerDefinitions,
     registry: agentStorage,
     appendSystemPrompt: config.appendSystemPrompt,
+    resolveProjectSystemPrompt: async (workspaceId) => {
+      if (!workspaceRegistry) return undefined;
+      return readOptimizeProjectInstructions({
+        workspaceId,
+        projects: projectRegistry,
+        workspaces: workspaceRegistry,
+      });
+    },
     onWorkspaceStateMayHaveChanged: ({ cwd }) => {
       workspaceGitService.onWorkspaceStateMayHaveChanged(cwd);
     },

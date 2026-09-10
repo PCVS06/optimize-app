@@ -234,6 +234,7 @@ function ProjectIcon({
       projectViewKey={projectViewKey}
       size={ICON_SIZE.md}
       textStyle={styles.projectIconFallbackText}
+      appearance="outline"
     />
   );
 }

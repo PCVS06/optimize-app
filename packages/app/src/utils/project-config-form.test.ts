@@ -5,6 +5,7 @@ import { applyDraftToConfig, configToDraft, type ProjectConfigDraft } from "./pr
 
 function emptyDraft(): ProjectConfigDraft {
   return {
+    systemPrompt: "",
     setupText: "",
     setupOriginalKind: "missing",
     teardownText: "",
@@ -348,5 +349,26 @@ describe("applyDraftToConfig", () => {
     const next = applyDraftToConfig({ draft, base });
     const scripts = next.scripts ?? {};
     expect(Object.keys(scripts)).toEqual(["dev"]);
+  });
+});
+
+describe("Optimize project instructions", () => {
+  it("saves instructions while preserving technical configuration and unknown fields", () => {
+    const base = {
+      systemPrompt: "Original",
+      worktree: { setup: ["prepare"] },
+      future: { enabled: true },
+    };
+    const draft = configToDraft(base);
+    expect(draft.systemPrompt).toBe("Original");
+    draft.systemPrompt = "Use the product catalog.\nDraft replies in German.";
+    const saved = applyDraftToConfig({ draft, base });
+    expect(saved).toEqual({ ...base, systemPrompt: draft.systemPrompt });
+    expect(configToDraft(PaseoConfigRawSchema.parse(saved)).systemPrompt).toBe(draft.systemPrompt);
+    draft.systemPrompt = "  ";
+    expect(applyDraftToConfig({ draft, base })).toEqual({
+      worktree: base.worktree,
+      future: base.future,
+    });
   });
 });

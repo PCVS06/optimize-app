@@ -1,3 +1,4 @@
+import { AdvancedOptions } from "@/components/advanced-options";
 import {
   ArrowDown,
   ArrowUp,
@@ -275,9 +276,12 @@ export function HostAgentsPage({ serverId }: { serverId: string }) {
     <View>
       {isConnected ? (
         <SettingsSection title={t("settings.hostSections.agents")}>
-          <InjectPaseoToolsCard serverId={serverId} />
-          <BrowserToolsOptInCard serverId={serverId} />
           <AppendSystemPromptCard serverId={serverId} />
+          <AdvancedOptions testID="assistant-advanced-options">
+            <InjectPaseoToolsCard serverId={serverId} />
+            <BrowserToolsOptInCard serverId={serverId} />
+            <AgentProfilesSection serverId={serverId} />
+          </AdvancedOptions>
         </SettingsSection>
       ) : (
         <View style={[settingsStyles.card, styles.emptyCard]}>
@@ -285,7 +289,6 @@ export function HostAgentsPage({ serverId }: { serverId: string }) {
         </View>
       )}
       <AgentSkillsSection serverId={serverId} />
-      <AgentProfilesSection serverId={serverId} />
     </View>
   );
 }
@@ -1094,21 +1097,20 @@ function AppendSystemPromptCard({ serverId }: { serverId: string }) {
   const { config, patchConfig } = useDaemonConfig(serverId);
   const persistedPrompt = config?.appendSystemPrompt ?? "";
   const [draft, setDraft] = useState(persistedPrompt);
+  const [saveError, setSaveError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const header = useMemo<SheetHeader>(
-    () => ({ title: t("settings.host.orchestration.systemPrompt.sheetTitle") }),
-    [t],
-  );
+  const header = useMemo<SheetHeader>(() => ({ title: t("optimize.companyInstructions") }), [t]);
 
   useEffect(() => {
-    setDraft(persistedPrompt);
-  }, [persistedPrompt]);
+    if (!isEditing) setDraft(persistedPrompt);
+  }, [isEditing, persistedPrompt]);
 
   const hasChanges = draft !== persistedPrompt;
 
   const handleOpen = useCallback(() => {
     setDraft(persistedPrompt);
+    setSaveError(false);
     setIsEditing(true);
   }, [persistedPrompt]);
 
@@ -1120,6 +1122,7 @@ function AppendSystemPromptCard({ serverId }: { serverId: string }) {
 
   const handleSave = useCallback(() => {
     setIsSaving(true);
+    setSaveError(false);
     void patchConfig({ appendSystemPrompt: draft })
       .then(() => {
         setIsEditing(false);
@@ -1127,6 +1130,7 @@ function AppendSystemPromptCard({ serverId }: { serverId: string }) {
       })
       .catch((error) => {
         console.error("[HostPage] Failed to save append system prompt", error);
+        setSaveError(true);
       })
       .finally(() => setIsSaving(false));
   }, [draft, patchConfig]);
@@ -1142,12 +1146,8 @@ function AppendSystemPromptCard({ serverId }: { serverId: string }) {
       <View style={settingsStyles.card} testID="host-page-append-system-prompt-card">
         <View style={settingsStyles.row}>
           <View style={settingsStyles.rowContent}>
-            <Text style={settingsStyles.rowTitle}>
-              {t("settings.host.orchestration.systemPrompt.title")}
-            </Text>
-            <Text style={settingsStyles.rowHint}>
-              {t("settings.host.orchestration.systemPrompt.hint")}
-            </Text>
+            <Text style={settingsStyles.rowTitle}>{t("optimize.companyInstructions")}</Text>
+            <Text style={settingsStyles.rowHint}>{t("optimize.companyInstructionsHint")}</Text>
           </View>
           <Button
             variant="outline"
@@ -1170,11 +1170,14 @@ function AppendSystemPromptCard({ serverId }: { serverId: string }) {
         >
           <SettingsTextAreaCard
             testID="host-page-append-system-prompt-input"
-            accessibilityLabel={t("settings.host.orchestration.systemPrompt.accessibilityLabel")}
+            accessibilityLabel={t("optimize.companyInstructions")}
             value={draft}
             onChangeText={setDraft}
-            placeholder={t("settings.host.orchestration.systemPrompt.placeholder")}
+            placeholder={t("optimize.companyInstructionsPlaceholder")}
           />
+          {saveError ? (
+            <InlineAlert variant="error" title={t("optimize.promptSaveFailed")} />
+          ) : null}
           <View style={styles.appendPromptActions}>
             <Button
               variant="ghost"

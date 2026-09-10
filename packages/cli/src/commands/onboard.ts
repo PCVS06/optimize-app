@@ -269,9 +269,9 @@ function printNextSteps(pairingUrl: string | null, paseoHome: string, richUi: bo
     pairingUrl
       ? "1. Open Paseo and scan the QR code above, or paste the pairing link."
       : "1. Open Paseo and connect to your daemon.",
-    "2. Web app: https://app.paseo.sh",
-    "3. Desktop app: https://github.com/getpaseo/paseo/releases/latest",
-    "4. Docs: https://paseo.sh/docs",
+    "2. App: https://github.com/PCVS06/optimize-app/releases",
+    "3. Desktop app: https://github.com/PCVS06/optimize-app/releases/latest",
+    "4. Docs: https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/branding/HELP.md",
     '5. Example: paseo run --output-schema schema.json "extract fields"',
   ];
   const quickReferenceLines = [

@@ -1,3 +1,4 @@
+import { FolderOpen } from "lucide-react-native";
 import { useMemo } from "react";
 import { type StyleProp, Text, type TextStyle, View } from "react-native";
 import { ProjectIconImage } from "@/components/project-icon-image";
@@ -36,12 +37,14 @@ export function ProjectIconView({
   projectViewKey,
   size,
   textStyle,
+  appearance = "initial",
 }: {
   iconDataUri: string | null;
   initial: string;
   projectViewKey: string;
   size: number;
   textStyle: StyleProp<TextStyle>;
+  appearance?: "initial" | "outline";
 }) {
   // The uploaded image is sized but never clipped — see projectIconRadius.
   const box = useMemo(() => ({ width: size, height: size }), [size]);
@@ -57,12 +60,19 @@ export function ProjectIconView({
   const textStyles = useMemo(() => [textStyle, WHITE_TEXT], [textStyle]);
 
   const fallback = useMemo(
-    () => (
-      <View style={fallbackStyles}>
-        <Text style={textStyles}>{initial}</Text>
-      </View>
-    ),
-    [fallbackStyles, initial, textStyles],
+    () =>
+      appearance === "outline" ? (
+        <FolderOpen
+          size={size}
+          color={identityColor(deriveIdentityColorName(projectViewKey))}
+          strokeWidth={1.6}
+        />
+      ) : (
+        <View style={fallbackStyles}>
+          <Text style={textStyles}>{initial}</Text>
+        </View>
+      ),
+    [appearance, fallbackStyles, initial, projectViewKey, size, textStyles],
   );
 
   return iconDataUri ? (

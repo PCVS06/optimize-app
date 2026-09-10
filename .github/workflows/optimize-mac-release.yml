@@ -1,0 +1,91 @@
+name: Optimize Mac release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing Optimize version tag, for example v0.8.1"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: optimize-mac-release
+  cancel-in-progress: false
+
+jobs:
+  mac:
+    if: github.repository == 'PCVS06/optimize-app'
+    runs-on: macos-14
+    timeout-minutes: 50
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Check release version and signing credentials
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const pkg = JSON.parse(readFileSync('packages/desktop/package.json', 'utf8'));
+          if (!/^v\d+\.\d+\.\d+$/.test(process.env.RELEASE_TAG) || process.env.RELEASE_TAG !== `v${pkg.version}`) {
+            throw new Error('Select a stable version tag matching the desktop package version.');
+          }
+          for (const name of ['APPLE_CERTIFICATE', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_ID', 'APPLE_PASSWORD', 'APPLE_TEAM_ID']) {
+            if (!process.env[name]) throw new Error(`Configure the ${name} secret in PCVS06/optimize-app.`);
+          }
+          NODE
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - name: Build and validate source
+        run: |
+          npm run build:server
+          npm run build:app-deps
+          npm run typecheck
+          npm run lint
+      - name: Package signed and notarized Optimize app
+        env:
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PASEO_DESKTOP_SMOKE: "1"
+          PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/optimize-smoke
+        run: |
+          (cd packages/app && PASEO_WEB_PLATFORM=electron npx expo export --platform web)
+          npm run build:main --workspace=@getpaseo/desktop
+          (cd packages/desktop && npx electron-builder --config electron-builder.yml --publish never --mac --arm64 -c.publish.channel=latest -c.publish.releaseType=draft)
+          codesign --verify --deep --strict packages/desktop/release/mac-arm64/Optimize.app
+          spctl --assess --type execute packages/desktop/release/mac-arm64/Optimize.app
+          test -s packages/desktop/release/latest-mac.yml
+      - name: Upload to an Optimize draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo PCVS06/optimize-app > /dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --repo PCVS06/optimize-app --json isDraft --jq .isDraft)" = true
+          else
+            gh release create "$RELEASE_TAG" --repo PCVS06/optimize-app --verify-tag --draft --title "Optimize $RELEASE_TAG" --notes-file branding/CHANGELOG.md
+          fi
+          gh release upload "$RELEASE_TAG" --repo PCVS06/optimize-app packages/desktop/release/*.zip packages/desktop/release/*.dmg packages/desktop/release/latest-mac.yml --clobber
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Optimize-release-diagnostics
+          path: ${{ runner.temp }}/optimize-smoke
+          if-no-files-found: ignore
+          retention-days: 7

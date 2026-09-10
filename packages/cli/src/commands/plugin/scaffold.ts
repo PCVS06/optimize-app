@@ -102,9 +102,9 @@ export function GreetingSurface({ theme, layout }: PluginSurfaceProps) {
         accessibilityRole="link"
         accessibilityLabel="Open the Paseo website"
         style={styles.button}
-        onPress={() => openExternal("https://paseo.sh")}
+        onPress={() => openExternal("https://www.optimize.bike/")}
       >
-        <Text style={styles.buttonText}>Open paseo.sh</Text>
+        <Text style={styles.buttonText}>Open Optimize</Text>
       </Pressable>
     </View>
   );
