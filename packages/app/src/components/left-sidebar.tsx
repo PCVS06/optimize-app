@@ -464,6 +464,7 @@ function SidebarFooter({
   handleAddHost: () => void;
   handleOpenHostSettings: (serverId: string) => void;
 }) {
+  const isCompact = useIsCompactFormFactor();
   const newAgentKeys = useShortcutKeys("new-agent");
   const settingsKeys = useShortcutKeys("toggle-settings");
 
@@ -476,19 +477,23 @@ function SidebarFooter({
         theme={theme}
       />
       <View style={styles.footerIconRow}>
-        <SidebarHostPicker
-          theme={theme}
-          label={labels.hosts}
-          onAddHost={handleAddHost}
-          onOpenHostSettings={handleOpenHostSettings}
-        />
-        <FooterIconButton
-          onPress={handleImportSession}
-          testID="sidebar-import-session"
-          label={labels.importSession}
-          icon={Import}
-          theme={theme}
-        />
+        {isCompact ? (
+          <>
+            <SidebarHostPicker
+              theme={theme}
+              label={labels.hosts}
+              onAddHost={handleAddHost}
+              onOpenHostSettings={handleOpenHostSettings}
+            />
+            <FooterIconButton
+              onPress={handleImportSession}
+              testID="sidebar-import-session"
+              label={labels.importSession}
+              icon={Import}
+              theme={theme}
+            />
+          </>
+        ) : null}
         <SidebarHelpMenu />
         <FooterIconButton
           onPress={handleSettings}

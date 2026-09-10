@@ -1,3 +1,4 @@
+import { AdvancedOptions } from "@/components/advanced-options";
 import { useCallback, useEffect, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { View, Text, Pressable } from "react-native";
@@ -64,6 +65,10 @@ export function OpenProjectScreen() {
         <View style={styles.logo}>
           <OptimizeLogo size={52} />
         </View>
+        <View style={styles.intro}>
+          <Text style={styles.introTitle}>{t("optimize.welcome")}</Text>
+          <Text style={styles.introHint}>{t("optimize.welcomeHint")}</Text>
+        </View>
         <View style={styles.tiles}>
           <HomeTile
             icon={FolderOpen}
@@ -73,29 +78,35 @@ export function OpenProjectScreen() {
             testID="open-project-submit"
             accent
           />
-          <HomeTile
-            icon={Inbox}
-            title={t("openProject.tiles.importSession.title")}
-            description={t("openProject.tiles.importSession.description")}
-            onPress={importSession.open}
-            testID="open-project-import-session"
-          />
-          <HomeTile
-            icon={Plug}
-            title={t("openProject.tiles.setupProviders.title")}
-            description={t("openProject.tiles.setupProviders.description")}
-            onPress={handleOpenProviders}
-            testID="open-project-setup-providers"
-          />
-          {localServerId ? (
-            <HomeTile
-              icon={Smartphone}
-              title={t("openProject.tiles.pairDevice.title")}
-              description={t("openProject.tiles.pairDevice.description")}
-              onPress={handleOpenPairDevice}
-              testID="open-project-pair-device"
-            />
-          ) : null}
+        </View>
+        <View style={styles.moreTools}>
+          <AdvancedOptions testID="open-project-advanced-options">
+            <View style={styles.tiles}>
+              <HomeTile
+                icon={Inbox}
+                title={t("openProject.tiles.importSession.title")}
+                description={t("openProject.tiles.importSession.description")}
+                onPress={importSession.open}
+                testID="open-project-import-session"
+              />
+              <HomeTile
+                icon={Plug}
+                title={t("openProject.tiles.setupProviders.title")}
+                description={t("openProject.tiles.setupProviders.description")}
+                onPress={handleOpenProviders}
+                testID="open-project-setup-providers"
+              />
+              {localServerId ? (
+                <HomeTile
+                  icon={Smartphone}
+                  title={t("openProject.tiles.pairDevice.title")}
+                  description={t("openProject.tiles.pairDevice.description")}
+                  onPress={handleOpenPairDevice}
+                  testID="open-project-pair-device"
+                />
+              ) : null}
+            </View>
+          </AdvancedOptions>
         </View>
       </View>
       <View style={styles.communityRow}>
@@ -133,10 +144,11 @@ function HomeTile({ icon: Icon, title, description, onPress, testID, accent }: H
   const pressableStyle = useCallback(
     ({ pressed }: { pressed: boolean }) => [
       styles.tile,
+      accent && styles.primaryTile,
       hovered && styles.tileHovered,
       pressed && styles.tilePressed,
     ],
-    [hovered],
+    [accent, hovered],
   );
 
   return (
@@ -178,8 +190,16 @@ const styles = StyleSheet.create((theme) => ({
   logo: {
     marginBottom: theme.spacing[8],
   },
+  intro: { width: "100%", maxWidth: 452, gap: theme.spacing[3], marginBottom: theme.spacing[6] },
+  introTitle: {
+    color: theme.colors.foreground,
+    fontSize: theme.fontSize["2xl"],
+    fontWeight: "500",
+  },
+  introHint: { color: theme.colors.foregroundMuted, fontSize: theme.fontSize.base, lineHeight: 22 },
+  moreTools: { width: "100%", maxWidth: 452 },
+  primaryTile: { width: "100%", minHeight: 80, flexDirection: "row", alignItems: "center" },
   tiles: {
-    marginTop: { xs: theme.spacing[6], md: theme.spacing[12] },
     width: "100%",
     maxWidth: 452,
     flexDirection: "row",

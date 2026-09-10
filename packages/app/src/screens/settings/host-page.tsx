@@ -281,6 +281,7 @@ export function HostAgentsPage({ serverId }: { serverId: string }) {
             <InjectPaseoToolsCard serverId={serverId} />
             <BrowserToolsOptInCard serverId={serverId} />
             <AgentProfilesSection serverId={serverId} />
+            <AgentSkillsSection serverId={serverId} />
           </AdvancedOptions>
         </SettingsSection>
       ) : (
@@ -288,7 +289,6 @@ export function HostAgentsPage({ serverId }: { serverId: string }) {
           <Text style={styles.emptyText}>{t("settings.host.agents.unavailable")}</Text>
         </View>
       )}
-      <AgentSkillsSection serverId={serverId} />
     </View>
   );
 }
