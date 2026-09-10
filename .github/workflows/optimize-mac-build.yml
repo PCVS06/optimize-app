@@ -55,7 +55,9 @@ jobs:
         run: |
           (cd packages/app && PASEO_WEB_PLATFORM=electron npx expo export --platform web)
           npm run build:main --workspace=@getpaseo/desktop
-          (cd packages/desktop && npx electron-builder --config electron-builder.yml --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false)
+          (cd packages/desktop && npx electron-builder --config electron-builder.yml --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false -c.mac.hardenedRuntime=false)
+      - name: Verify review signing and native runtime startup
+        run: node packages/desktop/scripts/verify-review-app.mjs
       - name: Launch packaged app and verify its daemon and terminal
         env:
           PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/optimize-smoke

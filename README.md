@@ -18,10 +18,10 @@ Requires Node 22, npm, and Xcode Command Line Tools. Run `npm ci`, then `npm run
 Build a local Apple Silicon review app with:
 
 ```sh
-npm run build:desktop -- --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false
+npm run build:desktop -- --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false -c.mac.hardenedRuntime=false
 ```
 
-The app is produced in `packages/desktop/release/mac-arm64/Optimize.app`. This uses ad-hoc signing for review. Distribution to staff still requires a Developer ID certificate and Apple notarization. `npm run brand:assets` regenerates branded app icons from the original SVG mark; ICNS generation requires macOS.
+The app is produced in `packages/desktop/release/mac-arm64/Optimize.app`. This uses development signing for review, with hardened runtime disabled for the ad-hoc build because it has no Developer ID team. The production builder configuration retains hardened runtime. Distribution to staff still requires a Developer ID certificate and Apple notarization. `npm run brand:assets` regenerates branded app icons from the original SVG mark; ICNS generation requires macOS.
 
 The **Optimize Mac build** workflow builds the app, checks types and lint, runs focused Pi and desktop tests, and launches the packaged app to verify its renderer, managed daemon, and terminal. Its artifact is an app ZIP, not a published release.
 
