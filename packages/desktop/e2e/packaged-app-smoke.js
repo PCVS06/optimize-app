@@ -1010,7 +1010,7 @@ async function verifyCompanyChats({ page, daemonHome, artifactDir }) {
     "first project chat",
   );
   await page.getByTestId(`company-chat-${projectChat.workspaceId}`).waitFor();
-  await page.getByText("How can I help?", { exact: true }).waitFor();
+  await page.getByText("How can I help?", { exact: true }).filter({ visible: true }).waitFor();
   const before = new Set(
     (fs.existsSync(workspacesFile) ? JSON.parse(fs.readFileSync(workspacesFile, "utf8")) : []).map(
       (row) => row.workspaceId,
@@ -1023,7 +1023,7 @@ async function verifyCompanyChats({ page, daemonHome, artifactDir }) {
     "standalone chat",
   );
   await page.getByTestId(`company-chat-${chat.workspaceId}`).waitFor();
-  await page.getByText("How can I help?", { exact: true }).waitFor();
+  await page.getByText("How can I help?", { exact: true }).filter({ visible: true }).waitFor();
   const container = JSON.parse(fs.readFileSync(projectsFile, "utf8")).find(
     (row) => row.projectId === chat.projectId,
   );
@@ -1163,19 +1163,25 @@ async function verifyCompanyEngineering({ page, daemonHome, artifactDir }) {
   if (await page.getByTestId("settings-advanced-options").count())
     throw new Error("Developer settings still appear in the staff navigation");
   await page.getByTestId("settings-back-to-workspace").click();
-  const picker = page.getByTestId("company-assistant-picker");
+  const picker = page.getByTestId("company-assistant-picker").filter({ visible: true });
   await picker.click();
   await page
     .getByTestId("combobox-desktop-container")
     .getByRole("button", { name: "Support assistant", exact: true })
     .click();
-  await page.getByRole("button", { name: "Assistant (Support assistant)", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Assistant (Support assistant)", exact: true })
+    .filter({ visible: true })
+    .waitFor();
   await picker.click();
   await page
     .getByTestId("combobox-desktop-container")
     .getByRole("button", { name: "Optimize", exact: true })
     .click();
-  await page.getByRole("button", { name: "Assistant (Optimize)", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Assistant (Optimize)", exact: true })
+    .filter({ visible: true })
+    .waitFor();
 }
 
 async function smokePackagedDesktopApp({ appPath }) {
