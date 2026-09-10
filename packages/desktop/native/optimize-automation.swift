@@ -112,6 +112,13 @@ func key(_ input: [String: Any]) throws {
         event?.post(tap: .cghidEventTap)
     }
 }
+func postText(_ units: [UniChar]) {
+    for pressed in [true, false] {
+        let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: pressed)
+        event?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
+        event?.post(tap: .cghidEventTap)
+    }
+}
 func operate(_ input: [String: Any]) throws -> [String: Any] {
     guard let action = input["action"] as? String else { try fail("Missing action") }
     if action.hasPrefix("credential-") { return try keychain(input) }
@@ -147,15 +154,17 @@ func operate(_ input: [String: Any]) throws -> [String: Any] {
             }
         case "type":
             guard let text = input["text"] as? String, text.utf16.count <= 20000 else { try fail("Invalid text") }
-            let units = Array(text.utf16)
-            for start in stride(from: 0, to: units.count, by: 20) {
-                let chunk = Array(units[start..<min(start + 20, units.count)])
-                for pressed in [true, false] {
-                    let event = CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: pressed)
-                    event?.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: chunk)
-                    event?.post(tap: .cghidEventTap)
+            var chunk: [UniChar] = []
+            for scalar in text.unicodeScalars {
+                let units = Array(String(scalar).utf16)
+                if chunk.count + units.count > 20 {
+                    postText(chunk)
+                    chunk.removeAll(keepingCapacity: true)
                 }
+                chunk.append(contentsOf: units)
             }
+            if !chunk.isEmpty { postText(chunk) }
+
         case "key": try key(input)
         case "scroll":
             guard let delta = input["delta"] as? Int32, abs(Int64(delta)) <= 2000 else { try fail("Invalid scroll delta") }
