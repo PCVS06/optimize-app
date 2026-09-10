@@ -48,9 +48,9 @@ describe("Pure black theme", () => {
     expect(darkPureBlackTheme.colors.terminal.background).toBe("#000000");
   });
 
-  it("uses Paseo's muted green accent", () => {
-    expect(darkPureBlackTheme.colors.accent).toBe("#20744A");
-    expect(darkPureBlackTheme.colors.accentBright).toBe("#7ccba0");
+  it("uses Optimize's red accent", () => {
+    expect(darkPureBlackTheme.colors.accent).toBe("#DC0B0B");
+    expect(darkPureBlackTheme.colors.accentBright).toBe("#FF7575");
   });
 
   it("derives sidebar interaction surfaces from the surface scale", () => {

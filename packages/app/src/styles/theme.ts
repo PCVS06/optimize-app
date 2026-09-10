@@ -318,8 +318,8 @@ const lightSemanticColors = buildLightSemanticColors({
   foregroundExtraMuted: "#a1a1aa",
   border: "#e4e4e7",
   borderAccent: "#ececf1",
-  accent: "#20744A",
-  accentBright: "#239956",
+  accent: "#DC0B0B",
+  accentBright: "#B50808",
   accentForeground: "#ffffff",
   primary: "#18181b",
   primaryForeground: "#fafafa",
@@ -440,24 +440,24 @@ export function buildDarkSemanticColors(tint: DarkThemeConfig) {
 // Dark tint definitions
 // ---------------------------------------------------------------------------
 
-// Paseo — subtle teal-green tint (default)
-const paseoDarkColors = buildDarkSemanticColors({
-  surface0: "#181B1A",
-  surface1: "#1E2120",
-  surface2: "#272A29",
-  surface3: "#434645",
-  surface4: "#595B5B",
-  surfaceDiffEmpty: "#252827",
-  surfaceSidebar: "#141716",
-  foregroundMuted: "#A1A5A4",
-  foregroundExtraMuted: "#717574",
-  border: "#252B2A",
-  borderAccent: "#2F3534",
-  accent: "#20744A",
-  accentBright: "#7ccba0",
-  destructive: "#c64f43", // warm red, hue ~7 — reads as red (not pink) against the green tint
-  terminalBlack: "#141716",
-  terminalBrightBlack: "#434645",
+// Optimize — charcoal surfaces and the company red (default)
+const optimizeDarkColors = buildDarkSemanticColors({
+  surface0: "#2B2B2B",
+  surface1: "#303030",
+  surface2: "#343434",
+  surface3: "#3A3A3A",
+  surface4: "#555555",
+  surfaceDiffEmpty: "#303030",
+  surfaceSidebar: "#252525",
+  foregroundMuted: "#B5B5B5",
+  foregroundExtraMuted: "#939393",
+  border: "#424242",
+  borderAccent: "#555555",
+  accent: "#DC0B0B",
+  accentBright: "#FF7575",
+  destructive: "#B53C31",
+  terminalBlack: "#252525",
+  terminalBrightBlack: "#555555",
 });
 
 // Zinc — neutral gray, no tint
@@ -617,7 +617,7 @@ export const OPACITY = {
 export const DEFAULT_UI_FONT_STACK: string = Platform.select({
   ios: "system-ui",
   default: "normal",
-  web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  web: "Jost, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 });
 
 export const DEFAULT_MONO_FONT_STACK: string = Platform.select({
@@ -688,7 +688,7 @@ export function buildDarkTheme(semanticColors: ReturnType<typeof buildDarkSemant
   } as const;
 }
 
-export const darkTheme = buildDarkTheme(paseoDarkColors);
+export const darkTheme = buildDarkTheme(optimizeDarkColors);
 export const darkZincTheme = buildDarkTheme(zincDarkColors);
 export const darkMidnightTheme = buildDarkTheme(midnightDarkColors);
 export const darkClaudeTheme = buildDarkTheme(claudeDarkColors);
@@ -707,8 +707,8 @@ const pureBlackDarkColors = buildDarkSemanticColors({
   foregroundExtraMuted: "#71717a",
   border: "#1c1c1c",
   borderAccent: "#242424",
-  accent: "#20744A",
-  accentBright: "#7ccba0",
+  accent: "#DC0B0B",
+  accentBright: "#FF7575",
   destructive: "#c44a4a",
   terminalBlack: "#595959",
   terminalBrightBlack: "#8a8a8a",

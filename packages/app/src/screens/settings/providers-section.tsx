@@ -17,11 +17,6 @@ import { useHostFeature } from "@/runtime/host-features";
 import { useProvidersSnapshot } from "@/hooks/use-providers-snapshot";
 import { useDaemonConfig } from "@/hooks/use-daemon-config";
 import { buildProviderDefinitions } from "@/utils/provider-definitions";
-import {
-  buildAcpProviderConfigPatch,
-  type AcpProviderCatalogItem,
-} from "@/hooks/use-acp-provider-catalog";
-import { ProviderCatalogList } from "@/components/provider-catalog-list";
 import { getProviderIcon } from "@/components/provider-icons";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Switch } from "@/components/ui/switch";
@@ -327,13 +322,12 @@ export function ProvidersSection({ serverId }: ProvidersSectionProps) {
   const { t } = useTranslation();
   const isConnected = useHostRuntimeIsConnected(serverId);
   const supportsProviderRemoval = useHostFeature(serverId, "providerRemoval");
-  const { entries, isLoading, refresh } = useProvidersSnapshot(serverId);
+  const { entries, isLoading } = useProvidersSnapshot(serverId);
   const { patchConfig } = useDaemonConfig(serverId);
   const openProviderSettings = useProviderSettingsStore((state) => state.open);
   const [pendingProviderId, setPendingProviderId] = useState<string | null>(null);
   const [removingProviderId, setRemovingProviderId] = useState<string | null>(null);
   const removingProviderIdRef = useRef<string | null>(null);
-  const [installingProviderId, setInstallingProviderId] = useState<string | null>(null);
 
   const providerDefinitions = useMemo(() => buildProviderDefinitions(entries), [entries]);
   const hasServer = serverId.length > 0;
@@ -394,91 +388,53 @@ export function ProvidersSection({ serverId }: ProvidersSectionProps) {
     [patchConfig, t],
   );
 
-  const handleInstall = useCallback(
-    async (entry: AcpProviderCatalogItem) => {
-      if (installingProviderId) return;
-      setInstallingProviderId(entry.id);
-      try {
-        await patchConfig(buildAcpProviderConfigPatch(entry));
-        await refresh([entry.id]);
-      } catch (error) {
-        Alert.alert(
-          t("settings.providers.addErrorTitle"),
-          error instanceof Error ? error.message : String(error),
-        );
-      } finally {
-        setInstallingProviderId((current) => (current === entry.id ? null : current));
-      }
-    },
-    [installingProviderId, patchConfig, refresh, t],
-  );
-
   return (
-    <>
-      <SettingsSection
-        title={t("settings.providers.title")}
-        testID="host-page-providers-card"
-        style={styles.sectionSpacing}
-      >
-        {!hasServer || !isConnected ? (
-          <View style={[settingsStyles.card, styles.emptyCard]}>
-            <Text style={styles.emptyText}>{t("settings.providers.unavailable")}</Text>
-          </View>
-        ) : null}
-        {hasServer && isConnected && isLoading ? (
-          <View style={[settingsStyles.card, styles.emptyCard]}>
-            <Text style={styles.emptyText}>{t("settings.providers.loading")}</Text>
-          </View>
-        ) : null}
-        {hasServer && isConnected && !isLoading && providerDefinitions.length > 0 ? (
-          <View style={settingsStyles.card}>
-            {providerDefinitions.map((def, index) => {
-              const entry = entries?.find((candidate) => candidate.provider === def.id);
-              if (!entry) return null;
-              return (
-                <ProviderRow
-                  key={def.id}
-                  serverId={serverId}
-                  def={def}
-                  entry={entry}
-                  enabled={entry.enabled ?? true}
-                  isToggling={pendingProviderId === def.id}
-                  isRemoving={removingProviderId === def.id}
-                  canRemove={supportsProviderRemoval && entry.source === "custom"}
-                  isFirst={index === 0}
-                  onPress={handleOpenProviderSettings}
-                  onToggleEnabled={handleToggleEnabled}
-                  onRemove={handleRemoveProvider}
-                />
-              );
-            })}
-          </View>
-        ) : null}
-      </SettingsSection>
-
-      {hasServer && isConnected ? (
-        <SettingsSection
-          title={t("settings.providers.addProvider")}
-          testID="host-page-add-provider-card"
-          style={styles.addProviderSection}
-        >
-          <ProviderCatalogList
-            serverId={serverId}
-            installingProviderId={installingProviderId}
-            onInstall={handleInstall}
-          />
-        </SettingsSection>
+    <SettingsSection
+      title={t("settings.providers.title")}
+      testID="host-page-providers-card"
+      style={styles.sectionSpacing}
+    >
+      {!hasServer || !isConnected ? (
+        <View style={[settingsStyles.card, styles.emptyCard]}>
+          <Text style={styles.emptyText}>{t("settings.providers.unavailable")}</Text>
+        </View>
       ) : null}
-    </>
+      {hasServer && isConnected && isLoading ? (
+        <View style={[settingsStyles.card, styles.emptyCard]}>
+          <Text style={styles.emptyText}>{t("settings.providers.loading")}</Text>
+        </View>
+      ) : null}
+      {hasServer && isConnected && !isLoading && providerDefinitions.length > 0 ? (
+        <View style={settingsStyles.card}>
+          {providerDefinitions.map((def, index) => {
+            const entry = entries?.find((candidate) => candidate.provider === def.id);
+            if (!entry) return null;
+            return (
+              <ProviderRow
+                key={def.id}
+                serverId={serverId}
+                def={def}
+                entry={entry}
+                enabled={entry.enabled ?? true}
+                isToggling={pendingProviderId === def.id}
+                isRemoving={removingProviderId === def.id}
+                canRemove={supportsProviderRemoval && entry.source === "custom"}
+                isFirst={index === 0}
+                onPress={handleOpenProviderSettings}
+                onToggleEnabled={handleToggleEnabled}
+                onRemove={handleRemoveProvider}
+              />
+            );
+          })}
+        </View>
+      ) : null}
+    </SettingsSection>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
   sectionSpacing: {
     marginBottom: theme.spacing[4],
-  },
-  addProviderSection: {
-    marginTop: theme.spacing[4],
   },
   emptyCard: {
     padding: theme.spacing[4],

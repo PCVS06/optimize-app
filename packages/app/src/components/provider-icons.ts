@@ -1,12 +1,6 @@
-import { Bot, PackagePlus } from "lucide-react-native";
+import { Bot } from "lucide-react-native";
 import { createElement, type ComponentType } from "react";
 import { SvgXml } from "react-native-svg";
-import { ClaudeIcon } from "@/components/icons/claude-icon";
-import { CodexIcon } from "@/components/icons/codex-icon";
-import { CopilotIcon } from "@/components/icons/copilot-icon";
-import { MiniMaxIcon } from "@/components/icons/minimax-icon";
-import { OpenCodeIcon } from "@/components/icons/opencode-icon";
-import { OmpIcon } from "@/components/icons/omp-icon";
 import { PiIcon } from "@/components/icons/pi-icon";
 import { ACP_PROVIDER_CATALOG } from "@/data/acp-provider-catalog";
 import { resolveProviderIconName } from "@/components/provider-icon-name";
@@ -19,14 +13,7 @@ export interface ProviderIconProps {
 export type ProviderIconComponent = ComponentType<ProviderIconProps>;
 
 const BUILTIN_PROVIDER_ICONS: Record<string, ProviderIconComponent> = {
-  claude: ClaudeIcon as unknown as ProviderIconComponent,
-  codex: CodexIcon as unknown as ProviderIconComponent,
-  copilot: CopilotIcon as unknown as ProviderIconComponent,
-  kiro: PackagePlus,
-  minimax: MiniMaxIcon as unknown as ProviderIconComponent,
-  omp: OmpIcon as unknown as ProviderIconComponent,
-  opencode: OpenCodeIcon as unknown as ProviderIconComponent,
-  pi: PiIcon as unknown as ProviderIconComponent,
+  pi: PiIcon,
 };
 
 const CATALOG_ICON_SVGS = new Map(
@@ -73,7 +60,7 @@ function getSnapshotProviderIcon(provider: string, svg: string): ProviderIconCom
 export function getProviderIcon(provider: string, serverId?: string | null): ProviderIconComponent {
   const name = resolveProviderIconName(provider, serverId);
   if (name.kind === "builtin") {
-    return BUILTIN_PROVIDER_ICONS[name.id];
+    return BUILTIN_PROVIDER_ICONS[name.id] ?? Bot;
   }
   if (name.kind === "catalog") {
     return getCatalogProviderIcon(name.id);

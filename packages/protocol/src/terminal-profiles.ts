@@ -11,21 +11,7 @@ import { KNOWN_PROVIDER_ICON_NAMES } from "./provider-icon-names.js";
  */
 export const PROMPT_SENTINEL = "{{{prompt}}}";
 
-// Prompt forms are taken from each CLI's own `--help`. claude, codex, and pi
-// take the prompt as a trailing positional. opencode's positional is the
-// project directory, so its prompt goes through `--prompt`, written in the
-// `--flag=value` form to keep it one argv entry that can be dropped whole when
-// no prompt is typed.
 export const DEFAULT_TERMINAL_PROFILES: readonly TerminalProfile[] = [
-  { id: "claude", name: "Claude Code", command: "claude", args: [PROMPT_SENTINEL], icon: "claude" },
-  { id: "codex", name: "Codex", command: "codex", args: [PROMPT_SENTINEL], icon: "codex" },
-  {
-    id: "opencode",
-    name: "OpenCode",
-    command: "opencode",
-    args: [`--prompt=${PROMPT_SENTINEL}`],
-    icon: "opencode",
-  },
   { id: "pi", name: "Pi", command: "pi", args: [PROMPT_SENTINEL], icon: "pi" },
 ];
 

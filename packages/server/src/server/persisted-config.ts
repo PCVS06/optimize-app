@@ -1,3 +1,4 @@
+import { OPTIMIZE_SYSTEM_PROMPT } from "./optimize-system-prompt.js";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -177,7 +178,7 @@ const AgentMetadataGenerationSchema = z
   })
   .strict();
 
-const BUILTIN_PROVIDER_IDS = ["claude", "codex", "copilot", "opencode", "pi", "omp"] as const;
+const BUILTIN_PROVIDER_IDS = ["pi"] as const;
 
 function isLegacyProviderEntry(value: unknown): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -347,7 +348,8 @@ const CONFIG_FILENAME = "config.json";
 const DEFAULT_PERSISTED_CONFIG = PersistedConfigSchema.parse({
   version: 1,
   daemon: {
-    listen: "127.0.0.1:6767",
+    listen: "127.0.0.1:6771",
+    appendSystemPrompt: OPTIMIZE_SYSTEM_PROMPT,
     cors: {
       allowedOrigins: ["https://app.paseo.sh"],
     },

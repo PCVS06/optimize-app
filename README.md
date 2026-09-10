@@ -1,3 +1,36 @@
+# Optimize
+
+Optimize is a company-branded fork of [Paseo](https://github.com/getpaseo/paseo), based on **v0.8.0** (`b8e24677e12b226c7c38c1c3a40649daa9f1152f`). It keeps Paseo's workspace, conversation, file, terminal, voice, scheduling, plugin, and remote-connection features, with **Pi as its only production agent runtime**.
+
+This first build establishes the full app before choosing which other features to simplify. Shopify, Gorgias, team identity, and company documents are not connected yet.
+
+- Company mark and colors come from [optimize.bike](https://www.optimize.bike/). Original source: [branding/optimize-logo.svg](branding/optimize-logo.svg). Jost is bundled with its SIL Open Font License.
+- The Mac app is **Optimize.app**, bundle identifier `bike.optimize.desktop`. Its daemon uses `~/.optimize` and `127.0.0.1:6771`. The optional desktop CLI installs as `optimize`, and agent links use `optimize://`.
+- Internal `@getpaseo/*` package names, plugin APIs, configuration keys, and the renderer origin remain compatible with Paseo. Historical provider source and tests remain in the fork for upstream comparison; other production provider registrations, alternative-agent installation catalog, and non-Pi terminal presets are removed.
+- Pi itself runs through its native RPC interface and uses your existing Pi models, authentication, packages, and extensions. Install and sign into Pi before starting a task. The app does not bundle model credentials.
+- The editable company prompt is seeded into the daemon configuration. Its readable source is [branding/system-prompt.md](branding/system-prompt.md). It does not enforce permissions; future business connectors need their own authorization checks.
+- Update downloads point to this fork. No public Optimize update channel has been published.
+
+## Build and run on Mac
+
+Requires Node 22, npm, and Xcode Command Line Tools. Run `npm ci`, then `npm run dev:desktop` for development. Checkout development keeps its own `.dev/paseo-home` state.
+
+Build a local Apple Silicon review app with:
+
+```sh
+npm run build:desktop -- --publish never --mac --arm64 --dir -c.mac.identity=- -c.mac.notarize=false
+```
+
+The app is produced in `packages/desktop/release/mac-arm64/Optimize.app`. This uses ad-hoc signing for review. Distribution to staff still requires a Developer ID certificate and Apple notarization. `npm run brand:assets` regenerates branded app icons from the original SVG mark; ICNS generation requires macOS.
+
+The **Optimize Mac build** workflow builds the app, checks types and lint, runs focused Pi and desktop tests, and launches the packaged app to verify its renderer, managed daemon, and terminal. Its artifact is an app ZIP, not a published release.
+
+## Upstream documentation and license
+
+The original Paseo documentation follows. Upstream instructions describing other agent runtimes apply to Paseo; Optimize's production registry is Pi-only. Apache-2.0 licensing and upstream attribution are preserved. Optimize's brand assets are not relicensed by this fork.
+
+---
+
 <p align="center">
   <img src="packages/website/public/logo.svg" width="64" height="64" alt="Paseo logo">
 </p>
