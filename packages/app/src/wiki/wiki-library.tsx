@@ -241,6 +241,8 @@ function ArticleButton({
       leftIcon={favorite ? Star : FileText}
       disabled={disabled}
       style={styles.articleButton}
+      numberOfLines={1}
+      textStyle={styles.singleLine}
       testID={`${favorite ? "wiki-favorite" : "wiki-page"}-${page.id}`}
     >
       {page.title}
@@ -282,6 +284,8 @@ function TreeRow({
         leftIcon={row.hasChildren ? BookOpen : FileText}
         disabled={disabled}
         style={styles.articleButton}
+        numberOfLines={1}
+        textStyle={styles.singleLine}
         testID={`wiki-page-${row.page.id}`}
       >
         {row.page.title}
@@ -321,6 +325,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   treeRow: { flexDirection: "row", alignItems: "center", minHeight: 36 },
   spacer: { width: 16 },
+  singleLine: { flexShrink: 1 },
   articleButton: { flex: 1, minWidth: 0, justifyContent: "flex-start" },
   align: { justifyContent: "flex-start" },
   result: { gap: 4 },

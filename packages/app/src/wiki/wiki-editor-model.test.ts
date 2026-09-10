@@ -11,6 +11,21 @@ const page: WikiPage = {
   updatedAt: "2026-09-10T12:00:00.000Z",
 };
 
+test("restoring content opens a publishable draft against the current revision", async () => {
+  const model = openWikiEditor({
+    page,
+    initial: { title: "Earlier title", body: "Earlier content", parentId: null },
+    write: async (input) => {
+      expect(input.id).toBe(page.id);
+      expect(input.expectedRevision).toBe(page.revision);
+      expect(input.body).toBe("Earlier content");
+      return { ...page, ...input };
+    },
+  });
+  expect(model.getState().canSave).toBe(true);
+  expect((await model.save())?.title).toBe("Earlier title");
+});
+
 test("failed and conflicting saves preserve the complete editable draft", async () => {
   const model = openWikiEditor({
     page,

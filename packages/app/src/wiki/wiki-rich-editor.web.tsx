@@ -21,8 +21,12 @@ import type { WikiRichEditorProps } from "./wiki-rich-editor";
 import { wikiRichExtensions } from "./wiki-rich-extensions";
 import "./wiki-rich-editor.css";
 import type { Theme } from "@/styles/theme";
-const ThemedEditorContent = withUnistyles(EditorContent);
-const editorColors = (theme: Theme) => ({ style: { color: theme.colors.foreground } });
+function ColoredEditorContent({ editor, color }: { editor: Editor; color?: string }) {
+  const style = useMemo(() => ({ color }), [color]);
+  return <EditorContent style={style} editor={editor} />;
+}
+const ThemedEditorContent = withUnistyles(ColoredEditorContent);
+const editorColors = (theme: Theme) => ({ color: theme.colors.foreground });
 
 const blocks = [
   { id: "text", value: "text", label: "Text" },

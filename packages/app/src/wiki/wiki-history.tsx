@@ -37,6 +37,7 @@ export function WikiHistory({
     },
     enabled: true,
     dataShape: "list",
+    staleTimeMs: 5000,
   });
   const revision = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "revision", page.id, selected],
@@ -48,6 +49,7 @@ export function WikiHistory({
     },
     enabled: Boolean(selected),
     dataShape: "value",
+    staleTimeMs: 60000,
   });
   const restore = useCallback(() => {
     if (revision.data)
