@@ -58,3 +58,40 @@ test.each([
     data: { type: "session", message },
   });
 });
+
+test("accepts recoverable Trash responses and optional metadata through the compiled wire validator", () => {
+  const page = {
+    id: "7ab122a2-a36d-4525-8792-99e460ee4158",
+    title: "Care",
+    body: "Original guidance",
+    parentId: null,
+    revision: "8ab122a2-a36d-4525-8792-99e460ee4158",
+    createdAt: "2026-09-10T12:00:00.000Z",
+    updatedAt: "2026-09-10T12:00:00.000Z",
+    trashedAt: "2026-09-10T12:00:00.000Z",
+    aliases: ["Product care"],
+  };
+  const messages = [
+    {
+      type: "wiki.trash.response",
+      payload: {
+        requestId: "trash",
+        ok: true,
+        pages: [{ ...page, excerpt: page.body }],
+        total: 1,
+        nextOffset: null,
+      },
+    },
+    { type: "wiki.archive.response", payload: { requestId: "archive", ok: true, page } },
+    {
+      type: "wiki.archive.response",
+      payload: {
+        requestId: "conflict",
+        ok: false,
+        error: { code: "conflict", message: "Page changed" },
+      },
+    },
+  ];
+  for (const message of messages)
+    expect(validateWSOutboundMessage({ type: "session", message }).success).toBe(true);
+});

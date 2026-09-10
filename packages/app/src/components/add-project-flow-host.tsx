@@ -1,4 +1,4 @@
-import { AddProjectFlow } from "@/components/add-project-flow";
+import { CompanyProjectDialog } from "@/company/company-project-dialog";
 import { useAddProjectFlowStore } from "@/stores/add-project-flow-store";
 
 export function AddProjectFlowHost() {
@@ -7,5 +7,5 @@ export function AddProjectFlowHost() {
 
   if (!request) return null;
 
-  return <AddProjectFlow key={request.id} request={request} onClose={close} />;
+  return <CompanyProjectDialog key={request.id} request={request} onClose={close} />;
 }

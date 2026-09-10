@@ -1,3 +1,4 @@
+import { getOptimizeMemoryStore, memoryProjectId } from "./optimize-memory.js";
 import { appendOptimizeWikiInstructions } from "./optimize-wiki.js";
 import { readOptimizeProjectInstructions } from "./optimize-project-instructions.js";
 import { describeHookWorkspace } from "./plugins/lifecycle/index.js";
@@ -930,6 +931,17 @@ export async function createPaseoDaemon(
       company: config.appendSystemPrompt,
       paseoHome: config.paseoHome,
     }),
+    resolveProfileSystemPrompt: (profileId) =>
+      profileId
+        ? daemonConfigStore.get().agentProfiles?.find((profile) => profile.id === profileId)
+            ?.systemPrompt
+        : undefined,
+    resolveMemoryContext: async (workspaceId) =>
+      getOptimizeMemoryStore(config.paseoHome).context(
+        workspaceRegistry
+          ? await memoryProjectId(workspaceId, projectRegistry, workspaceRegistry)
+          : null,
+      ),
     resolveProjectSystemPrompt: async (workspaceId) => {
       if (!workspaceRegistry) return undefined;
       return readOptimizeProjectInstructions({

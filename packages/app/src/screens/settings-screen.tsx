@@ -1,5 +1,5 @@
+import { MemoryPage } from "@/screens/settings/memory-page";
 import { EngineeringPage } from "@/screens/settings/engineering-page";
-import { AdvancedOptions } from "@/components/advanced-options";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
@@ -193,6 +193,7 @@ const HOST_SECTION_ITEMS: HostSectionItem[] = [
   { id: "projects", labelKey: "settings.hostSections.projects", icon: FolderOpen },
   { id: "connections", labelKey: "settings.hostSections.connections", icon: Network },
   { id: "pair-device", labelKey: "openProject.tiles.pairDevice.title", icon: Smartphone },
+  { id: "memory", labelKey: "Memory", icon: Sparkles },
   { id: "engineering", labelKey: "Engineering", icon: Bot },
   { id: "agents", labelKey: "optimize.assistant", icon: Bot },
   { id: "metadata", labelKey: "settings.hostSections.metadata", icon: Sparkles },
@@ -214,6 +215,8 @@ function renderHostSettingsContent(
       return <HostConnectionsPage serverId={view.serverId} />;
     case "pair-device":
       return <HostPairDevicePage serverId={view.serverId} />;
+    case "memory":
+      return <MemoryPage key={view.serverId} serverId={view.serverId} />;
     case "engineering":
     case "agents":
       return <EngineeringPage key={view.serverId} serverId={view.serverId} />;
@@ -1124,11 +1127,7 @@ function SettingsSidebar({
     "notifications",
     "about",
   ]);
-  const companyBasics = new Set<HostSectionSlug>(["engineering", "projects"]);
-  const activeAdvanced = Boolean(
-    (selectedSectionId && !appBasics.has(selectedSectionId)) ||
-    (selectedHostSection && !companyBasics.has(selectedHostSection)),
-  );
+  const companyBasics = new Set<HostSectionSlug>(["engineering", "projects", "memory"]);
 
   const sidebarBody = (
     <>
@@ -1201,47 +1200,6 @@ function SettingsSidebar({
           ) : null}
         </View>
       )}
-      <View style={sidebarStyles.list}>
-        <AdvancedOptions forceOpen={activeAdvanced} testID="settings-advanced-options">
-          {items
-            .filter((item) => !appBasics.has(item.id))
-            .map((item) => (
-              <SidebarSectionButton
-                key={item.id}
-                itemId={item.id}
-                label={t(item.labelKey)}
-                icon={item.icon}
-                isSelected={selectedSectionId === item.id}
-                onSelect={onSelectSection}
-              />
-            ))}
-          {hasHosts ? (
-            <>
-              <HostPicker
-                activeServerId={activeHostServerId}
-                sortedHosts={sortedHosts}
-                onSelectHost={onSelectHost}
-                onAddHost={onAddHost}
-                enableBuiltInDaemonOption={enableBuiltInDaemonOption}
-              />
-              {HOST_SECTION_ITEMS.filter(
-                (item) =>
-                  !companyBasics.has(item.id) &&
-                  !["agents", "providers", "plugins"].includes(item.id),
-              ).map((item) => (
-                <SidebarHostSectionButton
-                  key={item.id}
-                  itemId={item.id}
-                  label={t(item.labelKey)}
-                  icon={item.icon}
-                  isSelected={selectedHostSection === item.id}
-                  onSelect={onSelectHostSection}
-                />
-              ))}
-            </>
-          ) : null}
-        </AdvancedOptions>
-      </View>
     </>
   );
 

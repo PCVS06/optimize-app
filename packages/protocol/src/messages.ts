@@ -1,10 +1,22 @@
 import {
+  MemoryListRequestSchema,
+  MemoryWriteRequestSchema,
+  MemoryRemoveRequestSchema,
+  MemoryListResponseSchema,
+  MemoryWriteResponseSchema,
+  MemoryRemoveResponseSchema,
+} from "./optimize-memory.js";
+import {
+  WikiTrashRequestSchema,
+  WikiArchiveRequestSchema,
   WikiHistoryRequestSchema,
   WikiRevisionRequestSchema,
   WikiIndexRequestSchema,
   WikiSearchRequestSchema,
   WikiReadRequestSchema,
   WikiWriteRequestSchema,
+  WikiTrashResponseSchema,
+  WikiArchiveResponseSchema,
   WikiHistoryResponseSchema,
   WikiRevisionResponseSchema,
   WikiIndexResponseSchema,
@@ -170,9 +182,8 @@ export type TerminalProfile = z.infer<typeof TerminalProfileSchema>;
  * otherwise set one control at a time. Field names mirror `AgentSessionConfig`
  * so applying a profile is a copy rather than a translation table.
  *
- * There is deliberately no system prompt here. `AgentSessionConfig.systemPrompt`
- * is creation-only, so a profile carrying one would apply when starting a new
- * agent and silently do nothing when applied to a running one.
+ * Profile instructions are resolved by ID at launch and before every Pi turn.
+ * Routing notes remain descriptive and never become system instructions.
  */
 export const AgentProfileSchema = z
   .object({
@@ -189,6 +200,7 @@ export const AgentProfileSchema = z
     featureValues: z.record(z.string(), z.unknown()).optional(),
     /** Free text, surfaced to orchestrating agents by the `list_profiles` MCP tool. */
     notes: z.string().optional(),
+    systemPrompt: z.string().max(50_000).optional(),
   })
   .passthrough();
 
@@ -503,6 +515,7 @@ const AgentSessionConfigSchema = z.object({
   providerOptions: ProviderOptionsSchema.optional(),
   toolPolicy: ToolPolicySchema.optional(),
   systemPrompt: z.string().optional(),
+  profileId: z.string().optional(),
   mcpServers: z.record(z.string(), McpServerConfigSchema).optional(),
 });
 
@@ -866,6 +879,7 @@ const AgentActiveTurnPayloadSchema = z.object({
 });
 
 export const AgentSnapshotPayloadSchema = z.object({
+  profileId: z.string().optional(),
   id: z.string(),
   provider: AgentProviderSchema,
   cwd: z.string(),
@@ -899,6 +913,7 @@ export const AgentSnapshotPayloadSchema = z.object({
 export type AgentSnapshotPayload = z.infer<typeof AgentSnapshotPayloadSchema>;
 
 export const AgentListItemPayloadSchema = z.object({
+  profileId: z.string().optional(),
   id: z.string(),
   shortId: z.string(),
   title: z.string().nullable(),
@@ -1925,6 +1940,7 @@ export const SetAgentFeatureResponseMessageSchema = z.object({
  * clears them, matching the single-field RPCs above.
  */
 export const AgentConfigApplySchema = z.object({
+  profileId: z.string().nullable().optional(),
   modelId: z.string().nullable().optional(),
   modeId: z.string().optional(),
   thinkingOptionId: z.string().nullable().optional(),
@@ -2521,6 +2537,25 @@ export const ProjectAddRequestSchema = z.object({
   type: z.literal("project.add.request"),
   cwd: z.string(),
   requestId: z.string(),
+});
+
+export const CompanyCreateProjectRequestSchema = z.object({
+  type: z.literal("company.create_project.request"),
+  requestId: z.string(),
+  name: z.string(),
+});
+
+export const CompanyMoveChatRequestSchema = z.object({
+  type: z.literal("company.move_chat.request"),
+  requestId: z.string(),
+  workspaceId: z.string(),
+  projectId: z.string().optional(),
+});
+
+export const CompanyCreateChatRequestSchema = z.object({
+  type: z.literal("company.create_chat.request"),
+  requestId: z.string(),
+  projectId: z.string().optional(),
 });
 
 export const ProjectCreateDirectoryRequestSchema = z.object({
@@ -3142,12 +3177,17 @@ export const SessionInboundMessageSchema = z.discriminatedUnion("type", [
   AgentSkillsImportLegacySelectionRequestSchema,
   GetDaemonConfigRequestMessageSchema,
   SetDaemonConfigRequestMessageSchema,
+  WikiTrashRequestSchema,
+  WikiArchiveRequestSchema,
   WikiHistoryRequestSchema,
   WikiRevisionRequestSchema,
   WikiIndexRequestSchema,
   WikiSearchRequestSchema,
   WikiReadRequestSchema,
   WikiWriteRequestSchema,
+  MemoryListRequestSchema,
+  MemoryWriteRequestSchema,
+  MemoryRemoveRequestSchema,
   ReadProjectConfigRequestMessageSchema,
   WriteProjectConfigRequestMessageSchema,
   DictationStreamStartMessageSchema,
@@ -3224,6 +3264,9 @@ export const SessionInboundMessageSchema = z.discriminatedUnion("type", [
   OpenProjectRequestSchema,
   ProjectAddRequestSchema,
   ProjectCreateDirectoryRequestSchema,
+  CompanyCreateProjectRequestSchema,
+  CompanyCreateChatRequestSchema,
+  CompanyMoveChatRequestSchema,
   WorkspaceGithubSearchRepositoriesRequestSchema,
   ProjectGithubCloneRequestSchema,
   ArchiveWorkspaceRequestSchema,
@@ -3455,6 +3498,8 @@ export const ServerInfoStatusPayloadSchema = z
         agentRequestReceipts: z.boolean().optional(),
         // COMPAT(hubAgentRpc): added in v0.8.0; remove gate after 2027-03-05.
         hubAgentRpc: z.boolean().optional(),
+        // COMPAT(companyChats): added in Optimize v0.8.0, remove gate after 2027-03-10.
+        companyChats: z.boolean().optional(),
         providersSnapshot: z.boolean().optional(),
         // COMPAT(providersSnapshotCwd): added in v0.3.2, remove gate after 2027-02-10.
         providersSnapshotCwd: z.boolean().optional(),
@@ -3547,8 +3592,11 @@ export const ServerInfoStatusPayloadSchema = z
         // COMPAT(daemonSelfUpdate): added in v0.1.93, remove gate after 2026-12-13.
         daemonSelfUpdate: z.boolean().optional(),
         optimizeWiki: z.boolean().optional(),
+        optimizeMemory: z.boolean().optional(),
+        optimizeAssistantPrompts: z.boolean().optional(),
         optimizeWikiGraph: z.boolean().optional(),
         optimizeWikiDocuments: z.boolean().optional(),
+        optimizeWikiLifecycle: z.boolean().optional(),
         // COMPAT(agentForkContext): added in v0.1.102, remove gate after 2026-12-28.
         agentForkContext: z.boolean().optional(),
         // COMPAT(agentForkContextCursor): added in v0.1.108, remove gate after 2027-01-14.
@@ -3887,6 +3935,7 @@ export const WorkspaceDescriptorPayloadSchema = z
   .object({
     id: z.string(),
     projectId: z.string(),
+    companyKind: z.enum(["project", "chats"]).optional(),
     projectDisplayName: z.string(),
     // COMPAT(projectCustomName): added in v0.1.76, drop the optional gate when floor >= v0.1.76.
     // When the user has renamed a project, projectDisplayName carries the resolved
@@ -4082,6 +4131,7 @@ export const FetchRecentProviderSessionsResponseMessageSchema = z.object({
 // workspace is archived.
 export const WorkspaceProjectDescriptorPayloadSchema = z.object({
   projectId: z.string(),
+  companyKind: z.enum(["project", "chats"]).optional(),
   // COMPAT(projectKey): added in v0.2.4 on 2026-07-28; remove optional after 2027-01-28.
   projectKey: z.string().optional(),
   projectDisplayName: z.string(),
@@ -4334,6 +4384,35 @@ export const ProjectCreateDirectoryResponseSchema = z.object({
     // Error codes are open-ended on the wire so older clients can still parse
     // responses after a newer daemon learns another failure reason.
     errorCode: z.string().nullable(),
+  }),
+});
+
+export const CompanyCreateProjectResponseSchema = z.object({
+  type: z.literal("company.create_project.response"),
+  payload: z.object({
+    requestId: z.string(),
+    project: WorkspaceProjectDescriptorPayloadSchema.nullable(),
+    error: z.string().nullable(),
+  }),
+});
+
+export const CompanyMoveChatResponseSchema = z.object({
+  type: z.literal("company.move_chat.response"),
+  payload: z.object({
+    requestId: z.string(),
+    workspace: WorkspaceDescriptorPayloadSchema.nullable(),
+    project: WorkspaceProjectDescriptorPayloadSchema.nullable(),
+    error: z.string().nullable(),
+  }),
+});
+
+export const CompanyCreateChatResponseSchema = z.object({
+  type: z.literal("company.create_chat.response"),
+  payload: z.object({
+    requestId: z.string(),
+    workspace: WorkspaceDescriptorPayloadSchema.nullable(),
+    project: WorkspaceProjectDescriptorPayloadSchema.nullable(),
+    error: z.string().nullable(),
   }),
 });
 
@@ -6545,6 +6624,9 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion("type", [
   FetchWorkspacesResponseMessageSchema,
   ProjectAddResponseSchema,
   ProjectCreateDirectoryResponseSchema,
+  CompanyCreateProjectResponseSchema,
+  CompanyCreateChatResponseSchema,
+  CompanyMoveChatResponseSchema,
   OpenProjectResponseMessageSchema,
   WorkspaceGithubSearchRepositoriesResponseSchema,
   ProjectGithubCloneResponseSchema,
@@ -6582,12 +6664,17 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion("type", [
   DiagnosticsResponseSchema,
   GetDaemonConfigResponseMessageSchema,
   SetDaemonConfigResponseMessageSchema,
+  WikiTrashResponseSchema,
+  WikiArchiveResponseSchema,
   WikiHistoryResponseSchema,
   WikiRevisionResponseSchema,
   WikiIndexResponseSchema,
   WikiSearchResponseSchema,
   WikiReadResponseSchema,
   WikiWriteResponseSchema,
+  MemoryListResponseSchema,
+  MemoryWriteResponseSchema,
+  MemoryRemoveResponseSchema,
   ReadProjectConfigResponseMessageSchema,
   WriteProjectConfigResponseMessageSchema,
   SetAgentModeResponseMessageSchema,

@@ -297,6 +297,7 @@ const WorkspaceGitRuntimeSchema = z
   .optional();
 
 const StoredWorkspaceSchema = z.strictObject({
+  companyKind: z.enum(["project", "chats"]).optional(),
   id: z.string(),
   projectId: z.string(),
   projectDisplayName: z.string(),
@@ -326,6 +327,7 @@ const StoredWorkspaceSchema = z.strictObject({
 });
 
 const StoredProjectSchema = z.strictObject({
+  companyKind: z.enum(["project", "chats"]).optional(),
   projectId: z.string(),
   projectKey: z.string().optional(),
   projectDisplayName: z.string(),
@@ -678,6 +680,7 @@ function serializeWorkspace(workspace: WorkspaceDescriptor): StoredWorkspace {
   return {
     id: workspace.id,
     projectId: workspace.projectId,
+    ...(workspace.companyKind ? { companyKind: workspace.companyKind } : {}),
     projectDisplayName: workspace.projectDisplayName,
     projectCustomName: workspace.projectCustomName ?? null,
     projectCustomIconRevision: workspace.projectCustomIconRevision ?? null,
@@ -717,6 +720,7 @@ function serializeWorkspace(workspace: WorkspaceDescriptor): StoredWorkspace {
 function serializeProject(project: ProjectDescriptor): StoredProject {
   return {
     projectId: project.projectId,
+    ...(project.companyKind ? { companyKind: project.companyKind } : {}),
     ...(project.projectKey ? { projectKey: project.projectKey } : {}),
     projectDisplayName: project.projectDisplayName,
     projectCustomName: project.projectCustomName,

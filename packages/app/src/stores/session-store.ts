@@ -70,6 +70,7 @@ export interface AgentRuntimeInfo {
 }
 
 export interface Agent {
+  profileId?: string;
   serverId: string;
   id: string;
   provider: AgentProvider;
@@ -103,6 +104,7 @@ export interface Agent {
 }
 
 export interface WorkspaceDescriptor {
+  companyKind?: "project" | "chats";
   id: string;
   projectId: string;
   projectDisplayName: string;
@@ -139,6 +141,7 @@ export function normalizeWorkspaceDescriptor(
   return {
     id: normalizeWorkspaceOpaqueId(payload.id) ?? payload.id,
     projectId: payload.projectId,
+    ...(payload.companyKind ? { companyKind: payload.companyKind } : {}),
     projectDisplayName: payload.projectDisplayName,
     projectCustomName: payload.projectCustomName ?? null,
     projectCustomIconRevision: payload.projectCustomIconRevision ?? null,
@@ -168,6 +171,7 @@ export function normalizeWorkspaceDescriptor(
 }
 
 export interface ProjectDescriptor {
+  companyKind?: "project" | "chats";
   projectId: string;
   projectKey?: string | null;
   projectDisplayName: string;
@@ -183,6 +187,7 @@ export function normalizeProjectDescriptor(
 ): ProjectDescriptor {
   return {
     projectId: payload.projectId,
+    ...(payload.companyKind ? { companyKind: payload.companyKind } : {}),
     projectKey: payload.projectKey ?? null,
     projectDisplayName: payload.projectDisplayName,
     projectCustomName: payload.projectCustomName ?? null,

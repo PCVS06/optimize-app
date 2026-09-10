@@ -1,28 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getBuiltInLaunchOrder } from "./catalog";
-
-describe("getBuiltInLaunchOrder", () => {
-  it("leads with creating work in a primary pane", () => {
-    expect(getBuiltInLaunchOrder("primary")).toEqual([
-      "agent",
-      "terminal",
-      "changes",
-      "diff",
-      "files",
-      "browser",
-      "pullRequest",
-    ]);
-  });
-
-  it("leads with companion tools in a supporting pane", () => {
-    expect(getBuiltInLaunchOrder("supporting")).toEqual([
-      "changes",
-      "diff",
-      "files",
-      "terminal",
-      "agent",
-      "browser",
-      "pullRequest",
-    ]);
+describe("company tab catalog", () => {
+  it("offers conversations and browsing without developer tools", () => {
+    expect(getBuiltInLaunchOrder("primary")).toEqual(["agent", "browser"]);
+    expect(getBuiltInLaunchOrder("supporting")).toEqual(["browser", "agent"]);
   });
 });

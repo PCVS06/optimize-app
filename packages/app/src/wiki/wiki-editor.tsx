@@ -2,9 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { z } from "zod";
 import {
-  WikiPageSchema,
+  WikiPageIdSchema,
   type WikiPage,
   type WikiIndexEntry,
 } from "@getpaseo/protocol/optimize-wiki";
@@ -13,9 +12,13 @@ import { FormTextInput } from "@/components/ui/form-field";
 import { SelectField, type SelectFieldDisplay } from "@/components/ui/select-field";
 import { confirmDialog } from "@/utils/confirm-dialog";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
-import { openWikiEditor } from "./wiki-editor-model";
+import { openWikiEditor, WikiConflictError } from "./wiki-editor-model";
 import { wikiAncestors } from "./wiki-structure";
 import { WikiRichEditor } from "./wiki-rich-editor";
+import { WikiDraftSchema, wikiDraftKey, type WikiDraft } from "./wiki-drafts";
+import { WikiDocument } from "./wiki-document";
+
+function stayInEditor() {}
 
 export interface WikiNewPage {
   title?: string;
@@ -25,31 +28,26 @@ export interface WikiNewPage {
 interface EditorProps {
   page?: WikiPage;
   initial?: WikiNewPage;
+  draftId: string;
   pages: readonly WikiIndexEntry[];
   serverId: string;
   online: boolean;
   onSaved: (page: WikiPage) => void;
   onCancel: () => void;
 }
-const DraftSchema = z.object({
-  page: WikiPageSchema.optional(),
-  title: z.string().max(160),
-  body: z.string().max(200000),
-  parentId: z.string().uuid().nullable(),
-  parentTitle: z.string(),
-});
-type Draft = z.infer<typeof DraftSchema>;
 export function WikiEditor(props: EditorProps) {
-  const key = `optimize.wiki.draft.${props.serverId}.${props.page?.id ?? "new"}`;
-  const [loaded, setLoaded] = useState<{ draft: Draft | null; error: string | null } | null>(null);
+  const key = wikiDraftKey(props.serverId, props.draftId);
+  const [loaded, setLoaded] = useState<{ draft: WikiDraft | null; error: string | null } | null>(
+    null,
+  );
   useEffect(() => {
     let cancelled = false;
     void AsyncStorage.getItem(key)
       .then((raw) => {
-        let draft: Draft | null = null;
+        let draft: WikiDraft | null = null;
         if (raw) {
           try {
-            draft = DraftSchema.parse(JSON.parse(raw));
+            draft = WikiDraftSchema.parse(JSON.parse(raw));
           } catch {
             /* Keep an unreadable draft on disk for recovery. */
           }
@@ -94,15 +92,24 @@ function WikiEditorForm({
   onSaved,
   onCancel,
   draftKey,
+  draftId,
   recovered,
   storageError,
-}: EditorProps & { draftKey: string; recovered: Draft | null; storageError: string | null }) {
+}: EditorProps & { draftKey: string; recovered: WikiDraft | null; storageError: string | null }) {
   const page = recovered?.page ?? currentPage;
   const [draftError, setDraftError] = useState(storageError);
   const [source, setSource] = useState(false);
+  const [draftStatus, setDraftStatus] = useState("Draft saved on this Mac");
   const [model] = useState(() =>
     openWikiEditor({
       page,
+      newPageId: WikiPageIdSchema.safeParse(draftId).success
+        ? draftId
+        : globalThis.crypto.randomUUID(),
+      latest:
+        recovered?.page && currentPage?.revision !== recovered.page.revision
+          ? currentPage
+          : undefined,
       initial: recovered ?? initial,
       parentTitle:
         recovered?.parentTitle ??
@@ -112,7 +119,13 @@ function WikiEditorForm({
         const client = getHostRuntimeStore().getSnapshot(serverId)?.client;
         if (!client) throw new Error("Optimize is disconnected. Your draft is kept.");
         const result = await client.writeWiki(input);
-        if (!result.ok) throw new Error(result.error.message);
+        if (!result.ok) {
+          if (result.error.code === "conflict" && input.id) {
+            const latest = await client.readWiki(input.id);
+            if (latest.ok) throw new WikiConflictError(latest.page);
+          }
+          throw new Error(result.error.message);
+        }
         return result.page;
       },
     }),
@@ -120,38 +133,75 @@ function WikiEditorForm({
   const state = useSyncExternalStore(model.subscribe, model.getState, model.getState);
   const [queue] = useState(() => ({ tail: Promise.resolve() }));
   useEffect(() => {
-    return model.subscribe(() => {
+    function persistDraft() {
       const value = model.getState();
       if (value.status !== "editing") return;
-      const draft: Draft = {
-        page,
+      const base = model.getBasePage();
+      const unchanged = !value.title && !value.body && !base;
+      if (unchanged) return;
+      const draft: WikiDraft = {
+        page: base,
         title: value.title,
         body: value.body,
         parentId: value.parentId,
         parentTitle: value.parentTitle,
+        updatedAt: new Date().toISOString(),
       };
+      setDraftStatus("Saving draft…");
       queue.tail = queue.tail
         .then(() => AsyncStorage.setItem(draftKey, JSON.stringify(draft)))
+        .then(() => {
+          setDraftStatus("Draft saved on this Mac");
+          setDraftError(null);
+          return undefined;
+        })
         .catch(() => {
-          setDraftError("Draft could not be saved on this Mac. Publish before closing the editor.");
+          setDraftStatus("Draft not saved");
+          setDraftError(
+            "Draft could not be saved on this Mac. Keep the editor open or publish before leaving.",
+          );
         });
-    });
-  }, [model, page, draftKey, queue]);
+    }
+    if (!storageError) persistDraft();
+    return model.subscribe(persistDraft);
+  }, [model, draftKey, queue, storageError]);
   const save = useCallback(async () => {
     const saved = await model.save();
     if (!saved) return;
     await queue.tail;
     try {
+      await AsyncStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          page: saved,
+          title: saved.title,
+          body: saved.body,
+          parentId: saved.parentId ?? null,
+          parentTitle: model.getState().parentTitle,
+          updatedAt: saved.updatedAt,
+        }),
+      );
       await AsyncStorage.removeItem(draftKey);
     } catch {
-      /* The server save succeeded; do not offer a duplicate save. */
+      // New articles use a stable ID, so a retained draft cannot create a duplicate.
     }
     onSaved(saved);
   }, [model, onSaved, queue, draftKey]);
   const close = useCallback(async () => {
     await queue.tail;
+    if (
+      draftError &&
+      !(await confirmDialog({
+        title: "Leave without a saved draft?",
+        message:
+          "Local draft storage failed. Keep this editor open to preserve your text, or publish while connected.",
+        confirmLabel: "Leave editor",
+        destructive: true,
+      }))
+    )
+      return;
     onCancel();
-  }, [onCancel, queue]);
+  }, [onCancel, queue, draftError]);
   const discard = useCallback(async () => {
     if (
       !(await confirmDialog({
@@ -201,7 +251,7 @@ function WikiEditorForm({
       <View style={styles.header}>
         <View style={styles.status}>
           <View style={styles.dot} />
-          <Text style={styles.muted}>Draft · visible to you until published</Text>
+          <Text style={styles.muted}>{draftStatus} · only you can see it</Text>
         </View>
         <View style={styles.actions}>
           <Button size="sm" variant="ghost" onPress={close} disabled={saving} testID="wiki-cancel">
@@ -219,9 +269,32 @@ function WikiEditorForm({
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.article} keyboardShouldPersistTaps="handled">
-        {recovered && (
+        {state.latest && (
+          <View style={styles.conflict} testID="wiki-conflict">
+            <Text style={styles.error}>{state.error}</Text>
+            <Text style={styles.muted}>Latest published version: {state.latest.title}</Text>
+            <ScrollView style={styles.conflictPreview} nestedScrollEnabled>
+              <WikiDocument body={state.latest.body} pages={pages} onOpen={stayInEditor} />
+            </ScrollView>
+            <Text style={styles.muted}>
+              Your draft remains editable below. Bring any changes you want to keep into it, then
+              confirm you have reviewed this version.
+            </Text>
+            <Button
+              size="sm"
+              variant="secondary"
+              onPress={model.acceptLatest}
+              testID="wiki-accept-latest"
+            >
+              I reviewed the latest version
+            </Button>
+          </View>
+        )}
+        {(recovered || state.canSave) && (
           <View style={styles.recovered}>
-            <Text style={styles.muted}>Your local draft was recovered.</Text>
+            <Text style={styles.muted}>
+              {recovered ? "Your local draft was recovered." : "Unpublished changes"}
+            </Text>
             <Button size="sm" variant="ghost" onPress={discard} disabled={saving}>
               Discard draft
             </Button>
@@ -340,4 +413,12 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "center",
   },
   notice: { padding: 32, color: theme.colors.foregroundMuted },
+  conflict: {
+    padding: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+  },
+  conflictPreview: { maxHeight: 240 },
 }));

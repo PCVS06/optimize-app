@@ -54,3 +54,11 @@ test("table of contents preserves content and ignores headings inside code fence
   ]);
   expect(sections.map((entry) => entry.markdown).join("")).toBe(body + "\n");
 });
+
+test("old title aliases survive renaming but never silently resolve to a different article", () => {
+  const renamed = { ...pages[0]!, title: "Catalog", aliases: ["Products"] };
+  expect(resolveWikiLink({ target: "products", pages: [renamed] })?.id).toBe("one");
+  const reused = { ...pages[0]!, id: "another" };
+  expect(resolveWikiLink({ target: "Products", pages: [renamed, reused] })).toBe(null);
+  expect(resolveWikiLink({ target: "one", pages: [renamed, reused] })?.title).toBe("Catalog");
+});

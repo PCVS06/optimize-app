@@ -1,7 +1,7 @@
 import { ChoiceButton } from "@/components/ui/choice-button";
 import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import type { WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
+import { WikiPageIdSchema, type WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
 import { wikiRelations, resolveWikiLink } from "@getpaseo/protocol/wiki-links";
 import { Button } from "@/components/ui/button";
 import { wikiAncestors } from "./wiki-structure";
@@ -101,10 +101,17 @@ export function WikiRelated({ id, pages, onOpen }: NavigationProps & { id: strin
       {unresolved.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.heading}>Unresolved links</Text>
-          <Text style={styles.muted}>{unresolved.join(" · ")}</Text>
           <Text style={styles.muted}>
-            Create these pages or choose an existing article in the editor. Duplicate titles need a
-            link inserted by page ID.
+            {unresolved.length} linked {unresolved.length === 1 ? "article is" : "articles are"}{" "}
+            unavailable.
+          </Text>
+          <Text style={styles.muted}>
+            {unresolved.filter((target) => !WikiPageIdSchema.safeParse(target).success).join(" · ")}
+          </Text>
+          <Text style={styles.muted}>
+            Create these pages or choose an existing article in the editor. For renamed or duplicate
+            titles, use Link article in the editor to select the right page. Check Trash if an
+            article was deleted.
           </Text>
         </View>
       )}

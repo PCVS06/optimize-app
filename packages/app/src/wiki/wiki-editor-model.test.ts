@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { WikiPage } from "@getpaseo/protocol/optimize-wiki";
-import { openWikiEditor } from "./wiki-editor-model";
+import { openWikiEditor, WikiConflictError } from "./wiki-editor-model";
 
 const page: WikiPage = {
   id: "58bcbdb2-ae14-4b8b-b7ca-c87e98753c4b",
@@ -43,6 +43,7 @@ test("failed and conflicting saves preserve the complete editable draft", async 
     parentTitle: "Top level",
     status: "editing",
     error: "Someone changed this page.",
+    latest: null,
     canSave: true,
   });
 });
@@ -106,4 +107,50 @@ test("moving an article alone is a saveable change and keeps its selected parent
     error: "Conflict",
     status: "editing",
   });
+});
+
+test("conflicts require review and preserve the complete draft when adopting the newer revision", async () => {
+  const latest = {
+    ...page,
+    revision: "953df8d0-c224-4b09-b44c-f91ec64a8d46",
+    body: "Colleague update",
+  };
+  let calls = 0;
+  const model = openWikiEditor({
+    page,
+    write: async (input) => {
+      calls++;
+      if (calls === 1) throw new WikiConflictError(latest);
+      expect(input.expectedRevision).toBe(latest.revision);
+      return { ...latest, ...input };
+    },
+  });
+  model.setBody("My draft");
+  expect(await model.save()).toBe(null);
+  expect(model.getState().latest).toEqual(latest);
+  expect(model.getState().canSave).toBe(false);
+  expect(await model.save()).toBe(null);
+  expect(calls).toBe(1);
+  model.setBody("My draft with colleague update");
+  model.acceptLatest();
+  expect(model.getBasePage()).toEqual(latest);
+  expect(model.getState().body).toBe("My draft with colleague update");
+  expect(model.getState().canSave).toBe(true);
+  await expect(model.save()).resolves.toMatchObject({ body: "My draft with colleague update" });
+});
+
+test("new drafts keep one page ID across a failed publish and retry", async () => {
+  const newPageId = "be43aeca-a1ec-462a-bb83-a157d8b9b7cc";
+  const ids: Array<string | undefined> = [];
+  const model = openWikiEditor({
+    newPageId,
+    write: async (input) => {
+      ids.push(input.id);
+      throw new Error("Disconnected");
+    },
+  });
+  model.setTitle("Draft");
+  await model.save();
+  await model.save();
+  expect(ids).toEqual([newPageId, newPageId]);
 });

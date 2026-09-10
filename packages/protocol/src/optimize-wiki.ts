@@ -11,6 +11,8 @@ export const WikiPageSchema = WikiPageContentSchema.extend({
   revision: z.string().uuid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  trashedAt: z.string().datetime().nullable().optional(),
+  aliases: z.array(z.string().max(160)).optional(),
 });
 export const WikiPageSummarySchema = WikiPageSchema.omit({ body: true }).extend({
   excerpt: z.string(),
@@ -79,6 +81,7 @@ export const WikiIndexEntrySchema = z.object({
   parentId: WikiPageIdSchema.nullable(),
   updatedAt: z.string(),
   links: z.array(z.string()),
+  aliases: z.array(z.string()).optional(),
 });
 export type WikiIndexEntry = z.infer<typeof WikiIndexEntrySchema>;
 export const WikiIndexRequestSchema = z.object({
@@ -132,4 +135,27 @@ export const WikiRevisionResponseSchema = z.object({
     z.object({ requestId: z.string(), ok: z.literal(true), page: WikiPageSchema }),
     z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
   ]),
+});
+
+export const WikiArchiveInputSchema = z.object({
+  id: WikiPageIdSchema,
+  expectedRevision: WikiPageIdSchema,
+  archived: z.boolean(),
+});
+export type WikiArchiveInput = z.infer<typeof WikiArchiveInputSchema>;
+export const WikiTrashRequestSchema = WikiSearchInputSchema.extend({
+  type: z.literal("wiki.trash.request"),
+  requestId: z.string(),
+});
+export const WikiTrashResponseSchema = z.object({
+  type: z.literal("wiki.trash.response"),
+  payload: WikiSearchResponseSchema.shape.payload,
+});
+export const WikiArchiveRequestSchema = WikiArchiveInputSchema.extend({
+  type: z.literal("wiki.archive.request"),
+  requestId: z.string(),
+});
+export const WikiArchiveResponseSchema = z.object({
+  type: z.literal("wiki.archive.response"),
+  payload: WikiWriteResponseSchema.shape.payload,
 });

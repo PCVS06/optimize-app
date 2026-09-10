@@ -6,7 +6,8 @@ import {
   FileText,
   Plus,
   Home,
-  Network,
+  Trash2,
+  FilePenLine,
   ChevronDown,
   ChevronRight,
   Star,
@@ -27,7 +28,8 @@ export function WikiLibrary({
   onSearch,
   onOpen,
   onHome,
-  onGraph,
+  onTrash,
+  onDrafts,
   onNew,
   editing,
   enabled,
@@ -45,7 +47,8 @@ export function WikiLibrary({
   onSearch: (value: string) => void;
   onOpen: (id: string) => void;
   onHome: () => void;
-  onGraph: () => void;
+  onTrash: () => void;
+  onDrafts: () => void;
   onNew: () => void;
   editing: boolean;
   enabled: boolean;
@@ -174,13 +177,24 @@ export function WikiLibrary({
         <Button
           size="sm"
           variant="ghost"
-          leftIcon={Network}
-          onPress={onGraph}
-          disabled={editing || !enabled}
-          testID="wiki-open-graph"
+          leftIcon={FilePenLine}
+          onPress={onDrafts}
+          disabled={editing}
+          testID="wiki-open-drafts"
           style={styles.align}
         >
-          Knowledge graph
+          Your drafts
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          leftIcon={Trash2}
+          onPress={onTrash}
+          disabled={editing || !enabled}
+          testID="wiki-open-trash"
+          style={styles.align}
+        >
+          Trash
         </Button>
         <Text style={styles.caption}>{pages.length} articles · Shared knowledge</Text>
       </View>

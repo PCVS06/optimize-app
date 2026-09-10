@@ -21,6 +21,7 @@ const UntrustedWorkspaceSourceSchema = z.object({
 
 const PersistedProjectRecordSchema = z.object({
   projectId: z.string(),
+  companyKind: z.enum(["project", "chats"]).optional(),
   rootPath: z.string(),
   kind: z.enum(["git", "non_git"]),
   displayName: z.string(),
@@ -642,6 +643,7 @@ export class FileBackedWorkspaceRegistry
 
 export function createPersistedProjectRecord(input: {
   projectId: string;
+  companyKind?: "project" | "chats";
   rootPath: string;
   kind: PersistedProjectKind;
   displayName: string;

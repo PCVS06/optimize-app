@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { HostRouteBootstrapBoundary } from "@/components/host-route-bootstrap-boundary";
-import { NewWorkspaceScreen } from "@/screens/new-workspace-screen";
+import { CompanyNewChatScreen } from "@/screens/company-new-chat-screen";
 
 export default function NewWorkspaceRoute() {
   const params = useLocalSearchParams<{
@@ -25,14 +25,7 @@ export default function NewWorkspaceRoute() {
 
   return (
     <HostRouteBootstrapBoundary>
-      <NewWorkspaceScreen
-        key={screenKey}
-        serverId={serverId}
-        sourceDirectory={sourceDirectory}
-        displayName={displayName}
-        projectId={projectId}
-        draftId={draftId}
-      />
+      <CompanyNewChatScreen key={screenKey} serverId={serverId} projectId={projectId} />
     </HostRouteBootstrapBoundary>
   );
 }

@@ -5,7 +5,6 @@ import { useFormPreferences } from "@/hooks/use-form-preferences";
 import { useProvidersSnapshot } from "@/hooks/use-providers-snapshot";
 import { useSessionStore } from "@/stores/session-store";
 import { useToast } from "@/contexts/toast-context";
-import { toErrorMessage } from "@/utils/error-messages";
 import { showProviderNoticeToast } from "@/utils/provider-notice-toast";
 import {
   materializeAgentProfile,
@@ -41,7 +40,7 @@ export interface AgentProfilePickerRow {
 
 export interface AgentProfilePicker {
   rows: AgentProfilePickerRow[];
-  applyProfile: (profileId: string) => void;
+  applyProfile: (profileId: string | null) => Promise<void>;
 }
 
 export interface UseAgentProfilePickerInput {
@@ -129,11 +128,25 @@ export function useAgentProfilePicker(
   );
 
   const applyProfile = useCallback(
-    (profileId: string) => {
-      const profile = applicableProfiles.find((entry) => entry.id === profileId);
-      if (!profile) {
+    async (profileId: string | null) => {
+      if (profileId === null) {
+        if (target.kind === "draft") {
+          target.controls.applyProfile({
+            provider: "pi",
+            profileId: "",
+            modelId: "",
+            modeId: "",
+            thinkingOptionId: "",
+            featureValues: {},
+          });
+        } else {
+          if (!client) throw new Error("Connect to Optimize to switch assistants.");
+          await client.applyAgentConfig(target.agentId, { profileId: null });
+        }
         return;
       }
+      const profile = applicableProfiles.find((entry) => entry.id === profileId);
+      if (!profile) throw new Error("This assistant is unavailable. Refresh the list.");
       const resolved = materializeAgentProfile(profile);
 
       if (target.kind === "draft") {
@@ -142,20 +155,11 @@ export function useAgentProfilePicker(
       }
 
       const reconciled = reconcileMaterializedProfileMode(resolved, target.availableModeIds);
-      if (!reconciled) {
-        return;
-      }
+      if (!reconciled) throw new Error("The assistant is still loading. Try again.");
+      if (!client) throw new Error("Connect to Optimize to switch assistants.");
+      const notice = await client.applyAgentConfig(target.agentId, toAgentConfigApply(reconciled));
+      showProviderNoticeToast(toast, notice);
       persistSelection(reconciled);
-      if (!client) {
-        return;
-      }
-      void client
-        .applyAgentConfig(target.agentId, toAgentConfigApply(reconciled))
-        .then((notice) => showProviderNoticeToast(toast, notice))
-        .catch((error) => {
-          console.warn("[useAgentProfilePicker] applyAgentConfig failed", error);
-          toast.error(toErrorMessage(error));
-        });
     },
     [applicableProfiles, client, persistSelection, target, toast],
   );

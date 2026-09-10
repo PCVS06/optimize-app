@@ -62,6 +62,21 @@ import {
 } from "./workspace-contributions";
 import { resolveWorkspaceCommandCenterShortcuts } from "./workspace-shortcuts";
 
+const COMPANY_COMMANDS = new Set([
+  "tab:new-agent",
+  "tab:new-browser",
+  "tab:previous",
+  "tab:next",
+  "tab:close-current",
+  "tab:rename-current",
+  "tab:close-left",
+  "tab:close-right",
+  "tab:close-others",
+  "workspace:pin",
+  "workspace:rename",
+  "workspace:toggle-focus-mode",
+]);
+
 const WORKSPACE_COMMAND_CENTER_ICONS = {
   newAgent: getCommandCenterIcon(SquarePen),
   newTerminal: getCommandCenterIcon(SquareTerminal),
@@ -237,7 +252,7 @@ export function useWorkspaceCommandCenterActions(): void {
         gitActions,
         labels: {
           section: t("workspace.header.actions.workspaceActions"),
-          newAgent: t("workspace.tabs.actions.newAgent"),
+          newAgent: t("optimize.newConversation"),
           newTerminal: t("workspace.tabs.actions.newTerminal"),
           newBrowser: t("workspace.tabs.actions.newBrowser"),
           splitRight: t("workspace.tabs.actions.splitRight"),
@@ -304,7 +319,7 @@ export function useWorkspaceCommandCenterActions(): void {
         copyPath,
         copyBranchName,
         toggleLabel,
-      }),
+      }).filter((entry) => COMPANY_COMMANDS.has(entry.id)),
     [
       activeTabIndex,
       activeTabKind,

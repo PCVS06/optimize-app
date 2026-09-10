@@ -51,6 +51,7 @@ export interface UseAgentFormStateOptions {
 export interface UseAgentFormStateResult {
   selectedServerId: string | null;
   selectedProvider: AgentProvider | null;
+  selectedProfileId?: string;
   selectedMode: string;
   setModeFromUser: (modeId: string) => void;
   selectedModel: string;
@@ -324,6 +325,7 @@ export function useAgentFormState(options: UseAgentFormStateOptions): UseAgentFo
       const providerPrefs = preferenceOverlayRef.current.current().providerPreferences?.[provider];
       const action = {
         type: "APPLY_PROFILE_FROM_USER" as const,
+        profileId: profile.profileId,
         provider,
         modelId: profile.modelId,
         modeId: profile.modeId,
@@ -475,6 +477,7 @@ export function useAgentFormState(options: UseAgentFormStateOptions): UseAgentFo
     () => ({
       selectedServerId: serverId,
       selectedProvider: formState.provider,
+      selectedProfileId: formState.profileId,
       selectedMode: formState.modeId,
       setModeFromUser,
       selectedModel: formState.model,
@@ -505,6 +508,7 @@ export function useAgentFormState(options: UseAgentFormStateOptions): UseAgentFo
     }),
     [
       serverId,
+      formState.profileId,
       formState.provider,
       formState.modeId,
       formState.model,

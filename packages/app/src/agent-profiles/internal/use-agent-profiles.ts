@@ -16,7 +16,8 @@ export interface UseAgentProfilesResult {
 export function useAgentProfiles(serverId: string | null): UseAgentProfilesResult {
   const { config, patchConfig } = useDaemonConfig(serverId);
   const isSupported = useSessionStore((state) => {
-    return supportsAgentProfiles(state.sessions[serverId ?? ""]?.serverInfo?.features);
+    const features = state.sessions[serverId ?? ""]?.serverInfo?.features;
+    return supportsAgentProfiles(features) && features?.optimizeAssistantPrompts === true;
   });
 
   const saveProfiles = useCallback(

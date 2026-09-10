@@ -209,3 +209,109 @@ test("finds readable product identifiers escaped by the visual Markdown editor",
   expect(result.pages[0]?.excerpt).toContain("SKU_OPT_718");
   expect((await wiki.read(page.id)).body).toBe(page.body);
 });
+
+test("Trash excludes pages from current knowledge, preserves children and history, and restores stable identities", async () => {
+  const root = await wiki.write({
+    title: "Products",
+    body: "Company overview",
+    expectedRevision: null,
+  });
+  const child = await wiki.write({
+    title: "Care",
+    body: `See [[${root.id}|Products]]`,
+    parentId: root.id,
+    expectedRevision: null,
+  });
+  const deleted = await wiki.archive({
+    id: root.id,
+    expectedRevision: root.revision,
+    archived: true,
+  });
+  expect(deleted.trashedAt).toBeTruthy();
+  expect(deleted.revision).not.toBe(root.revision);
+  await expect(wiki.read(root.id)).rejects.toMatchObject({ code: "not_found" });
+  expect((await wiki.search({ query: "Company overview" })).pages).toEqual([]);
+  expect(await wiki.index()).toMatchObject([{ id: child.id, parentId: null }]);
+  expect((await wiki.read(child.id)).parentId).toBe(null);
+  expect((await wiki.trash()).pages.map((page) => page.id)).toEqual([root.id]);
+  expect((await wiki.readRevision(root.id, root.revision)).body).toBe(root.body);
+  await expect(wiki.write({ ...root, expectedRevision: root.revision })).rejects.toMatchObject({
+    code: "not_found",
+  });
+  await expect(wiki.write({ ...root, expectedRevision: null })).rejects.toMatchObject({
+    code: "conflict",
+  });
+  await expect(
+    wiki.archive({ id: root.id, expectedRevision: root.revision, archived: false }),
+  ).rejects.toMatchObject({ code: "conflict" });
+  const restored = await wiki.archive({
+    id: root.id,
+    expectedRevision: deleted.revision,
+    archived: false,
+  });
+  expect(restored.id).toBe(root.id);
+  expect(restored.body).toBe(root.body);
+  expect((await wiki.read(child.id)).parentId).toBe(root.id);
+  expect((await wiki.trash()).pages).toEqual([]);
+  expect((await wiki.history(root.id)).revisions).toHaveLength(2);
+});
+
+test("restoring a child whose parent remains in Trash moves it safely to Wiki home", async () => {
+  const root = await wiki.write({ title: "Products", body: "", expectedRevision: null });
+  const child = await wiki.write({
+    title: "Care",
+    body: "Guide",
+    parentId: root.id,
+    expectedRevision: null,
+  });
+  const deleted = await wiki.archive({
+    id: child.id,
+    expectedRevision: child.revision,
+    archived: true,
+  });
+  await wiki.archive({ id: root.id, expectedRevision: root.revision, archived: true });
+  const restored = await wiki.archive({
+    id: child.id,
+    expectedRevision: deleted.revision,
+    archived: false,
+  });
+  expect(restored.parentId).toBe(null);
+  await expect(
+    wiki.write({ ...restored, body: "Updated", expectedRevision: restored.revision }),
+  ).resolves.toMatchObject({ parentId: null, body: "Updated" });
+});
+
+test("title links keep working after renames and newly published links use stable page IDs", async () => {
+  const root = await wiki.write({ title: "Products", body: "Overview", expectedRevision: null });
+  const child = await wiki.write({
+    title: "Care",
+    body: "[[Products]] and `[[Products]]`",
+    expectedRevision: null,
+  });
+  expect(child.body).toBe(`[[${root.id}|Products]] and \`[[Products]]\``);
+  const renamed = await wiki.write({
+    ...root,
+    title: "Product knowledge",
+    expectedRevision: root.revision,
+  });
+  expect(renamed.aliases).toContain("Products");
+  expect((await wiki.index()).find((entry) => entry.id === root.id)?.aliases).toContain("Products");
+  const next = await wiki.write({
+    title: "Support",
+    body: "[[Products|old link]]",
+    expectedRevision: null,
+  });
+  expect(next.body).toBe(`[[${root.id}|old link]]`);
+});
+
+test("a named new draft has a stable page ID and a repeated create cannot duplicate publication", async () => {
+  const id = "e564d774-c726-4a29-9f79-2041a63e734a";
+  const input = { id, title: "New article", body: "Saved once", expectedRevision: null };
+  const first = await wiki.write(input);
+  const repeated = await wiki.write(input);
+  expect(repeated).toEqual(first);
+  expect((await wiki.search()).total).toBe(1);
+  await expect(wiki.write({ ...input, body: "Different content" })).rejects.toMatchObject({
+    code: "conflict",
+  });
+});

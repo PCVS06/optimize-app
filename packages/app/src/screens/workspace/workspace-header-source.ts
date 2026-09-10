@@ -41,25 +41,32 @@ function areHeaderLabelsEquivalent(
   return normalizedA === normalizedB;
 }
 
-export function resolveWorkspaceHeader(input: { workspace: WorkspaceDescriptor }): {
+export function resolveWorkspaceHeader(input: {
+  workspace: WorkspaceDescriptor;
+  agentTitle?: string | null;
+}): {
   title: string;
   subtitle: string;
 } {
   return {
-    title: input.workspace.name,
-    subtitle: input.workspace.projectDisplayName,
+    title: input.workspace.title || input.agentTitle || input.workspace.name,
+    subtitle: input.workspace.companyKind === "chats" ? "" : input.workspace.projectDisplayName,
   };
 }
 
 export function resolveWorkspaceHeaderRenderState(input: {
   workspace: WorkspaceDescriptor | null;
   checkoutState: WorkspaceHeaderCheckoutState;
+  agentTitle?: string | null;
 }): WorkspaceHeaderRenderState {
   if (!input.workspace) {
     return { kind: "skeleton" };
   }
 
-  const header = resolveWorkspaceHeader({ workspace: input.workspace });
+  const header = resolveWorkspaceHeader({
+    workspace: input.workspace,
+    agentTitle: input.agentTitle,
+  });
   const checkout = input.checkoutState.kind === "ready" ? input.checkoutState.checkout : null;
   const currentBranchName =
     checkout?.isGit && checkout.currentBranch !== "HEAD"
@@ -70,7 +77,8 @@ export function resolveWorkspaceHeaderRenderState(input: {
     kind: "ready",
     title: header.title,
     subtitle: header.subtitle,
-    isSubtitleDistinct: !areHeaderLabelsEquivalent(header.title, header.subtitle),
+    isSubtitleDistinct:
+      Boolean(header.subtitle) && !areHeaderLabelsEquivalent(header.title, header.subtitle),
     isGitCheckout: checkout?.isGit ?? false,
     currentBranchName,
   };

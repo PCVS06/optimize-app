@@ -849,7 +849,8 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await rich.press("Enter");
   await rich.pressSequentially("Use the approved service guide. WIKI_CONTEXT_718.");
   await page.getByTestId("wiki-cancel").click();
-  await page.getByTestId("wiki-new-page").click();
+  await page.getByTestId("wiki-open-drafts").click();
+  await page.locator('[data-testid^="wiki-resume-draft-"]').first().click();
   await page.getByText("Your local draft was recovered.", { exact: true }).waitFor();
   await page
     .getByTestId("wiki-rich-content")
@@ -927,17 +928,9 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByTestId("wiki-article-title").waitFor();
   const updatedChild = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
   if (updatedChild.parentId !== overview.id) throw new Error("Wiki hierarchy did not persist");
-  await page.getByTestId("wiki-open-graph").click();
-  await page.getByTestId("wiki-graph").waitFor();
-  if (artifactDir)
-    await page.screenshot({
-      path: path.join(artifactDir, "optimize-wiki-graph.png"),
-      fullPage: true,
-    });
-  await page
-    .getByTestId("wiki-graph")
-    .getByRole("button", { name: "Products overview", exact: true })
-    .click();
+  if (await page.getByTestId("wiki-open-graph").count())
+    throw new Error("Wiki graph was not removed");
+  await page.getByTestId(`wiki-page-${overview.id}`).click();
   await page
     .getByTestId("wiki-subpages")
     .getByText("Product care guide", { exact: true })
@@ -964,12 +957,218 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     );
   await page.getByRole("button", { name: "Add favorite", exact: true }).click();
   await page.getByTestId(`wiki-favorite-${savedWiki.id}`).waitFor();
+  await page.getByTestId("wiki-trash-page").click();
+  await page.getByRole("button", { name: "Move to Trash", exact: true }).click();
+  await page.getByTestId("wiki-open-trash").click();
+  await page.getByTestId(`wiki-trashed-page-${savedWiki.id}`).waitFor();
+  const trashed = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
+  if (!trashed.trashedAt) throw new Error("Wiki trash did not persist");
+  await page.getByTestId(`wiki-restore-page-${savedWiki.id}`).click();
+  await page.getByTestId("wiki-article-title").waitFor();
+  const recovered = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
+  if (recovered.trashedAt || recovered.id !== savedWiki.id || recovered.body !== restored.body)
+    throw new Error("Wiki restore lost article identity or content");
   await page.getByTestId("wiki-home-navigation").click();
   if (artifactDir)
     await page.screenshot({
       path: path.join(artifactDir, "optimize-wiki-home.png"),
       fullPage: true,
     });
+}
+
+async function waitForSavedRecord(file, select, description) {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(file)) {
+      const result = select(JSON.parse(fs.readFileSync(file, "utf8")));
+      if (result) return result;
+    }
+    await delay(100);
+  }
+  throw new Error(`Did not persist ${description}`);
+}
+
+async function verifyCompanyChats({ page, daemonHome, artifactDir }) {
+  const projectsFile = path.join(daemonHome, "projects", "projects.json");
+  const workspacesFile = path.join(daemonHome, "projects", "workspaces.json");
+  await page.getByTestId("company-add-project").click();
+  await page.getByTestId("company-project-name").fill("Customer support");
+  await page.getByTestId("company-project-create").click();
+  await page.getByTestId("company-project-dialog").waitFor({ state: "hidden" });
+  const project = await waitForSavedRecord(
+    projectsFile,
+    (rows) =>
+      rows.find(
+        (row) =>
+          row.companyKind === "project" && (row.customName ?? row.name) === "Customer support",
+      ),
+    "named company project",
+  );
+  const before = new Set(
+    (fs.existsSync(workspacesFile) ? JSON.parse(fs.readFileSync(workspacesFile, "utf8")) : []).map(
+      (row) => row.workspaceId,
+    ),
+  );
+  await page.getByTestId("sidebar-global-new-workspace").click();
+  const chat = await waitForSavedRecord(
+    workspacesFile,
+    (rows) => rows.find((row) => !before.has(row.workspaceId)),
+    "standalone chat",
+  );
+  await page.getByTestId(`company-chat-${chat.workspaceId}`).waitFor();
+  await page.getByText("How can I help?", { exact: true }).waitFor();
+  const container = JSON.parse(fs.readFileSync(projectsFile, "utf8")).find(
+    (row) => row.projectId === chat.projectId,
+  );
+  if (container?.companyKind !== "chats")
+    throw new Error("New chat unexpectedly requires a project");
+  for (const id of [
+    "composer-import-agent-pill",
+    "workspace-open-in-editor",
+    "workspace-header-menu-trigger",
+  ])
+    if (await page.getByTestId(id).isVisible())
+      throw new Error(`Coding control still visible: ${id}`);
+  await page.getByTestId(`company-chat-options-${chat.workspaceId}`).click();
+  await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+  await page
+    .getByTestId("company-chat-options-dialog")
+    .getByRole("button", { name: "Customer support", exact: true })
+    .click();
+  const moved = await waitForSavedRecord(
+    workspacesFile,
+    (rows) =>
+      rows.find(
+        (row) => row.workspaceId === chat.workspaceId && row.projectId === project.projectId,
+      ),
+    "chat project assignment",
+  );
+  if (moved.cwd !== chat.cwd) throw new Error("Moving a chat changed its runtime directory");
+  await page.reload();
+  await page.getByTestId(`company-chat-${chat.workspaceId}`).waitFor();
+  await page.getByTestId(`company-chat-options-${chat.workspaceId}`).click();
+  await page.getByRole("menuitem", { name: "Move to project", exact: true }).click();
+  await page.getByRole("button", { name: "Outside projects", exact: true }).click();
+  await waitForSavedRecord(
+    workspacesFile,
+    (rows) =>
+      rows.find(
+        (row) => row.workspaceId === chat.workspaceId && row.projectId === container.projectId,
+      ),
+    "chat moved outside projects",
+  );
+  if (artifactDir)
+    await page.screenshot({
+      path: path.join(artifactDir, "optimize-company-chats.png"),
+      fullPage: true,
+    });
+}
+
+async function verifyCompanyMemory({ page, daemonHome, artifactDir }) {
+  await page.getByTestId("sidebar-settings").click();
+  await page.getByTestId("settings-host-section-memory").click();
+  await page.getByTestId("memory-add").click();
+  await page.getByTestId("memory-title").fill("Customer reply language");
+  await page
+    .getByTestId("memory-body")
+    .fill("Use the customer's preferred language. MEMORY_COMPANY_812.");
+  await page.getByTestId("memory-save").click();
+  await page.getByTestId("memory-editor").waitFor({ state: "hidden" });
+  const file = path.join(daemonHome, "memory", "records.json");
+  const record = await waitForSavedRecord(
+    file,
+    (rows) => rows.find((row) => row.title === "Customer reply language"),
+    "company memory",
+  );
+  if (record.projectId !== null) throw new Error("Company memory has wrong scope");
+  await page.reload();
+  await page.getByTestId("settings-host-section-memory").click();
+  const row = page.getByTestId("memory-record").filter({ hasText: "Customer reply language" });
+  await row
+    .getByText("Use the customer's preferred language. MEMORY_COMPANY_812.", { exact: true })
+    .waitFor();
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByTestId("memory-body").fill("Respect the requested language. MEMORY_UPDATED_813.");
+  await page.getByTestId("memory-save").click();
+  await page.getByTestId("memory-editor").waitFor({ state: "hidden" });
+  const updated = await waitForSavedRecord(
+    file,
+    (rows) =>
+      rows.find((entry) => entry.id === record.id && entry.body.includes("MEMORY_UPDATED_813")),
+    "edited memory",
+  );
+  if (updated.revision === record.revision)
+    throw new Error("Memory update did not create a revision");
+  if (artifactDir)
+    await page.screenshot({ path: path.join(artifactDir, "optimize-memory.png"), fullPage: true });
+  await row.getByRole("button", { name: "Forget", exact: true }).click();
+  await page.getByRole("button", { name: "Forget", exact: true }).last().click();
+  await waitForSavedRecord(
+    file,
+    (rows) => rows.every((entry) => entry.id !== record.id),
+    "forgotten memory",
+  );
+}
+
+async function verifyCompanyEngineering({ page, daemonHome, artifactDir }) {
+  // Optimize: exercise the actual settings UI against the isolated packaged daemon.
+  await page.getByTestId("settings-host-section-engineering").waitFor({ timeout: 30000 });
+  if (await page.getByTestId("settings-host-section-terminals").isVisible()) {
+    throw new Error("Technical settings must be collapsed by default");
+  }
+  await page.getByTestId("settings-host-section-engineering").click();
+  await page.getByTestId("host-page-append-system-prompt-edit").click();
+  const companyInstructions = "Optimize smoke: use the company product catalog.";
+  await page.getByTestId("host-page-append-system-prompt-input").fill(companyInstructions);
+  await page.getByTestId("host-page-append-system-prompt-save").click();
+  await page.getByTestId("host-page-append-system-prompt-sheet").waitFor({ state: "hidden" });
+  const savedConfig = JSON.parse(fs.readFileSync(path.join(daemonHome, "config.json"), "utf8"));
+  if (savedConfig.daemon?.appendSystemPrompt !== companyInstructions) {
+    throw new Error("Company instructions did not persist through the packaged app");
+  }
+  if (artifactDir) {
+    await page.screenshot({
+      path: path.join(artifactDir, "optimize-company-settings.png"),
+      fullPage: true,
+    });
+  }
+  await page.getByTestId("agent-profiles-add-button").click();
+  await page.getByTestId("agent-profile-name-input").fill("Support assistant");
+  const assistantPrompt = "Cite verified support sources. ASSISTANT_PROMPT_814.";
+  await page.getByTestId("agent-profile-system-prompt-input").fill(assistantPrompt);
+  await page.getByTestId("agent-profile-save-button").click();
+  await page.getByTestId("agent-profile-edit-modal").waitFor({ state: "hidden" });
+  await waitForSavedRecord(
+    path.join(daemonHome, "config.json"),
+    (config) =>
+      config.daemon?.agentProfiles?.find(
+        (profile) =>
+          profile.name === "Support assistant" && profile.systemPrompt === assistantPrompt,
+      ),
+    "assistant system prompt",
+  );
+  await page.getByTestId("engineering-tab-context").click();
+  await page.getByText("Context engineering", { exact: true }).waitFor();
+  await page.getByTestId("engineering-tab-agents").click();
+  await page.getByText("Agent behavior", { exact: true }).waitFor();
+  await page.getByTestId("engineering-tab-models").click();
+  await page.getByTestId("engineering-tab-extensions").click();
+  if (await page.getByTestId("settings-advanced-options").count())
+    throw new Error("Developer settings still appear in the staff navigation");
+  await page.getByTestId("settings-back-to-workspace").click();
+  const picker = page.getByTestId("company-assistant-picker");
+  await picker.click();
+  await page
+    .getByTestId("combobox-desktop-container")
+    .getByRole("button", { name: "Support assistant", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Assistant (Support assistant)", exact: true }).waitFor();
+  await picker.click();
+  await page
+    .getByTestId("combobox-desktop-container")
+    .getByRole("button", { name: "Optimize", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Assistant (Optimize)", exact: true }).waitFor();
 }
 
 async function smokePackagedDesktopApp({ appPath }) {
@@ -1075,38 +1274,11 @@ async function smokePackagedDesktopApp({ appPath }) {
         JSON.stringify(providers, null, 2),
       );
     }
+    await verifyCompanyChats({ page, daemonHome, artifactDir });
     await verifyOptimizeWiki({ page, daemonHome, artifactDir });
+    await verifyCompanyMemory({ page, daemonHome, artifactDir });
 
-    // Optimize: exercise the actual settings UI against the isolated packaged daemon.
-    await page.getByTestId("sidebar-settings").click();
-    await page.getByTestId("settings-host-section-engineering").waitFor({ timeout: 30000 });
-    if (await page.getByTestId("settings-host-section-terminals").isVisible()) {
-      throw new Error("Technical settings must be collapsed by default");
-    }
-    await page.getByTestId("settings-host-section-engineering").click();
-    await page.getByTestId("host-page-append-system-prompt-edit").click();
-    const companyInstructions = "Optimize smoke: use the company product catalog.";
-    await page.getByTestId("host-page-append-system-prompt-input").fill(companyInstructions);
-    await page.getByTestId("host-page-append-system-prompt-save").click();
-    await page.getByTestId("host-page-append-system-prompt-sheet").waitFor({ state: "hidden" });
-    const savedConfig = JSON.parse(fs.readFileSync(path.join(daemonHome, "config.json"), "utf8"));
-    if (savedConfig.daemon?.appendSystemPrompt !== companyInstructions) {
-      throw new Error("Company instructions did not persist through the packaged app");
-    }
-    if (artifactDir) {
-      await page.screenshot({
-        path: path.join(artifactDir, "optimize-company-settings.png"),
-        fullPage: true,
-      });
-    }
-    await page.getByTestId("engineering-tab-context").click();
-    await page.getByText("Context engineering", { exact: true }).waitFor();
-    await page.getByTestId("engineering-tab-agents").click();
-    await page.getByText("Agent behavior", { exact: true }).waitFor();
-    await page.getByTestId("engineering-tab-models").click();
-    await page.getByTestId("engineering-tab-extensions").click();
-    await page.getByTestId("settings-advanced-options").click();
-    await page.getByTestId("settings-host-section-terminals").waitFor();
+    await verifyCompanyEngineering({ page, daemonHome, artifactDir });
     await stopDaemonForCleanup();
     console.log(
       `Packaged desktop smoke passed: real renderer and preload loaded; renderer-started desktop daemon pid ${status.pid}, listen ${status.listen}; CLI shim daemon status and terminal smoke succeeded`,

@@ -179,6 +179,7 @@ function buildStoredAgentConfig(record: StoredAgentRecord): AgentSessionConfig {
     config.providerOptions = record.config.providerOptions;
   }
   if (record.config.toolPolicy != null) config.toolPolicy = record.config.toolPolicy;
+  if (record.config.profileId) config.profileId = record.config.profileId;
   if (record.config.systemPrompt != null) {
     config.systemPrompt = record.config.systemPrompt;
   }
@@ -307,6 +308,8 @@ export interface AgentManagerOptions {
   resolvePaseoToolPolicy?: (provider: AgentProvider) => ProviderPaseoToolsPolicy | undefined;
   appendSystemPrompt?: string;
   resolveProjectSystemPrompt?: (workspaceId: string | undefined) => Promise<string | undefined>;
+  resolveProfileSystemPrompt?: (profileId: string | undefined) => string | undefined;
+  resolveMemoryContext?: (workspaceId: string | undefined) => Promise<string>;
   agentStreamCoalesceWindowMs?: number;
   rescueTimeouts?: AgentManagerRescueTimeouts;
   beforeSteerUnavailableFallback?: (input: {
@@ -725,6 +728,8 @@ export class AgentManager {
   ) => ProviderPaseoToolsPolicy | undefined;
   private appendSystemPrompt: string;
   private readonly resolveProjectSystemPrompt: AgentManagerOptions["resolveProjectSystemPrompt"];
+  private readonly resolveProfileSystemPrompt: AgentManagerOptions["resolveProfileSystemPrompt"];
+  private readonly resolveMemoryContext: AgentManagerOptions["resolveMemoryContext"];
   private onAgentAttention?: AgentAttentionCallback;
   private onAgentArchived?: AgentArchivedCallback;
   private onWorkspaceStateMayHaveChanged?: (params: { cwd: string }) => void;
@@ -746,6 +751,8 @@ export class AgentManager {
     this.resolvePaseoToolPolicy = options.resolvePaseoToolPolicy ?? (() => undefined);
     this.appendSystemPrompt = options.appendSystemPrompt ?? "";
     this.resolveProjectSystemPrompt = options.resolveProjectSystemPrompt;
+    this.resolveProfileSystemPrompt = options.resolveProfileSystemPrompt;
+    this.resolveMemoryContext = options.resolveMemoryContext;
     this.logger = options.logger.child({ module: "agent", component: "agent-manager" });
     this.rescueTimeouts = {
       reloadSessionCloseMs:
@@ -1876,6 +1883,15 @@ export class AgentManager {
     });
   }
 
+  async setAgentProfile(agentId: string, profileId: string | null): Promise<void> {
+    const agent = this.requireAgent(agentId);
+    if (profileId) this.resolveProfileSystemPrompt?.(profileId);
+    agent.config.profileId = profileId ?? undefined;
+    this.touchUpdatedAt(agent);
+    await this.persistSnapshot(agent);
+    this.emitState(agent, { persist: false });
+  }
+
   async setAgentMode(agentId: string, modeId: string): Promise<AgentProviderNotice | null> {
     const agent = this.requireSessionAgent(agentId);
     const notice = (await agent.session.setMode(modeId)) ?? null;
@@ -2376,6 +2392,16 @@ export class AgentManager {
   }): Promise<string> {
     const { agent, agentId, pendingRun, prompt, options } = params;
     try {
+      if (agent.session.updateSystemPrompt) {
+        const current = this.applyDaemonAppendSystemPrompt(
+          agent.config,
+          await this.resolveProjectSystemPrompt?.(agent.workspaceId),
+          await this.resolveMemoryContext?.(agent.workspaceId),
+        );
+        await agent.session.updateSystemPrompt(
+          [current.systemPrompt, current.daemonAppendSystemPrompt].filter(Boolean).join("\n\n"),
+        );
+      }
       const result = await agent.session.startTurn(prompt, options);
       if (pendingRun.settled) {
         throw new Error(`Agent ${agentId} run was canceled before its turn started`);
@@ -5067,6 +5093,7 @@ export class AgentManager {
         mcpAuthToken: this.mcpAuthToken,
       }),
       projectPrompt,
+      await this.resolveMemoryContext?.(workspaceId),
     );
     return { storedConfig, launchConfig, paseoToolPolicy };
   }
@@ -5074,10 +5101,13 @@ export class AgentManager {
   private applyDaemonAppendSystemPrompt(
     config: AgentSessionConfig,
     projectPrompt?: string,
+    memory?: string,
   ): AgentSessionConfig {
     const daemonAppendSystemPrompt = composeOptimizeInstructions({
       company: this.appendSystemPrompt,
       project: projectPrompt,
+      profile: this.resolveProfileSystemPrompt?.(config.profileId),
+      memory,
     });
     const next = { ...config };
     delete next.daemonAppendSystemPrompt;

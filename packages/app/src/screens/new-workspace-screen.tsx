@@ -787,6 +787,7 @@ type NewWorkspaceComposerState = NonNullable<
 >;
 
 interface WorkspaceDraftSubmissionConfig {
+  profileId?: string;
   cwd: string;
   provider: AgentProvider;
   modeId: string | null;
@@ -1038,6 +1039,7 @@ function resolveWorkspaceDraftSubmissionConfig(input: {
       model: initialSetup.model,
       thinkingOptionId: initialSetup.thinkingOptionId,
       featureValues: initialSetup.featureValues,
+      profileId: initialSetup.profileId,
       target: { kind: "draft", draftId, setup: initialSetup },
     };
   }
@@ -1048,6 +1050,7 @@ function resolveWorkspaceDraftSubmissionConfig(input: {
     model: composerState.effectiveModelId || null,
     thinkingOptionId: composerState.effectiveThinkingOptionId || null,
     featureValues: composerState.featureValues,
+    profileId: composerState.selectedProfileId,
     target: { kind: "draft", draftId },
   };
 }
@@ -1090,6 +1093,7 @@ async function submitWorkspaceDraft(input: SubmitDraftInput): Promise<SubmitOutc
           workspaceId,
           config: buildWorkspaceDraftAgentConfig({
             provider: submission.provider,
+            profileId: submission.profileId,
             cwd: submission.cwd,
             ...(submission.modeId ? { modeId: submission.modeId } : {}),
             ...(submission.model ? { model: submission.model } : {}),
@@ -1097,6 +1101,7 @@ async function submitWorkspaceDraft(input: SubmitDraftInput): Promise<SubmitOutc
               ? { thinkingOptionId: submission.thinkingOptionId }
               : {}),
             ...(submission.featureValues ? { featureValues: submission.featureValues } : {}),
+            ...(submission.profileId ? { profileId: submission.profileId } : {}),
           }),
           text: text.trim(),
           clientMessageId,
@@ -1132,6 +1137,7 @@ async function submitWorkspaceDraft(input: SubmitDraftInput): Promise<SubmitOutc
     ...(submission.model ? { model: submission.model } : {}),
     ...(submission.thinkingOptionId ? { thinkingOptionId: submission.thinkingOptionId } : {}),
     ...(submission.featureValues ? { featureValues: submission.featureValues } : {}),
+    ...(submission.profileId ? { profileId: submission.profileId } : {}),
     allowEmptyText: true,
   });
   clearDraft("sent");

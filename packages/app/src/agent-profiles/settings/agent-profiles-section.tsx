@@ -19,6 +19,7 @@ import { AgentProfileRow } from "./agent-profile-row";
 
 const ThemedPlus = withUnistyles(Plus);
 const mutedColorMapping = (theme: Theme) => ({ color: theme.colors.foregroundMuted });
+const defaultAssistantSeed = { provider: "pi" };
 const addIcon = <ThemedPlus size={ICON_SIZE.sm} uniProps={mutedColorMapping} />;
 
 interface EditTarget {
@@ -128,19 +129,18 @@ export function AgentProfilesSection({ serverId }: { serverId: string }): ReactE
         leftIcon={addIcon}
         onPress={handleAddOpen}
         disabled={!profiles}
-        accessibilityLabel={t("settings.host.agentProfiles.addProfileTitle")}
+        accessibilityLabel="Create assistant"
         testID="agent-profiles-add-button"
-      />
+      >
+        Create assistant
+      </Button>
     ),
-    [handleAddOpen, profiles, t],
+    [handleAddOpen, profiles],
   );
 
   if (!isConnected || !isSupported) {
     return (
-      <SettingsSection
-        title={t("settings.host.agentProfiles.sectionTitle")}
-        testID="agent-profiles-section"
-      >
+      <SettingsSection title="Assistants and their system prompts" testID="agent-profiles-section">
         <View style={settingsStyles.card} testID="agent-profiles-unavailable">
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
@@ -157,7 +157,7 @@ export function AgentProfilesSection({ serverId }: { serverId: string }): ReactE
   return (
     <>
       <SettingsSection
-        title={t("settings.host.agentProfiles.sectionTitle")}
+        title="Assistants and their system prompts"
         trailing={addButton}
         testID="agent-profiles-section"
       >
@@ -193,6 +193,7 @@ export function AgentProfilesSection({ serverId }: { serverId: string }): ReactE
         serverId={serverId}
         visible={editTarget !== null}
         mode={editTarget?.mode ?? "create"}
+        seed={defaultAssistantSeed}
         {...(editTarget?.profile ? { profile: editTarget.profile } : {})}
         onClose={handleEditClose}
         onSave={handleSave}

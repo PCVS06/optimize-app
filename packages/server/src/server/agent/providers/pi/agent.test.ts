@@ -1449,6 +1449,25 @@ describe("PiRpcAgentSession", () => {
     await session.close();
   });
 
+  test("refreshes Optimize instructions in the same Pi process without stale accumulation", async () => {
+    const pi = new FakePi();
+    const client = createClient(pi);
+    const session = await client.createSession(
+      createConfig({ daemonAppendSystemPrompt: "Old company and profile instructions" }),
+    );
+    const extensionPath = pi.recordedLaunches[0]!.extensionPaths[0]!;
+    await session.updateSystemPrompt?.("Updated company, project, assistant and memory");
+    expect(await applyPaseoExtensionSystemPrompt(extensionPath, "Pi base")).toBe(
+      "Pi base\n\nUpdated company, project, assistant and memory",
+    );
+    await session.updateSystemPrompt?.("Revised again");
+    expect(await applyPaseoExtensionSystemPrompt(extensionPath, "Pi base")).toBe(
+      "Pi base\n\nRevised again",
+    );
+    expect(pi.recordedLaunches).toHaveLength(1);
+    await session.close();
+  });
+
   test("resumes Pi sessions with daemon system prompts appended", async () => {
     const pi = new FakePi();
     const client = createClient(pi);

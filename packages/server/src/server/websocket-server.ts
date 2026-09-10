@@ -1700,6 +1700,7 @@ export class VoiceAssistantWebSocketServer {
         checkoutRefresh: true,
         // COMPAT(workspaceMultiplicity): added in v0.1.97, drop the gate when floor >= v0.1.97
         workspaceMultiplicity: true,
+        companyChats: true,
         // COMPAT(projectRemove): added in v0.1.97, drop the gate when floor >= v0.1.97.
         projectRemove: true,
         // COMPAT(projectAdd): added in v0.1.97, drop the gate when floor >= v0.1.97.
@@ -1724,6 +1725,9 @@ export class VoiceAssistantWebSocketServer {
         optimizeWiki: true,
         optimizeWikiGraph: true,
         optimizeWikiDocuments: true,
+        optimizeMemory: true,
+        optimizeAssistantPrompts: true,
+        optimizeWikiLifecycle: true,
         daemonSelfUpdate: false, // Optimize updates the app and its runtime together.
         // COMPAT(agentForkContext): added in v0.1.102, remove gate after 2026-12-28.
         agentForkContext: true,

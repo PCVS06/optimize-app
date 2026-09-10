@@ -572,6 +572,7 @@ export class WorkspaceDirectory {
         projectCustomIconRevision: project.customIconRevision ?? null,
         projectRootPath: project.rootPath,
         projectKind: project.kind,
+        companyKind: project.companyKind,
       }));
   }
 

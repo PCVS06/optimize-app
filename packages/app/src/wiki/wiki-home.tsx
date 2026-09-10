@@ -53,9 +53,9 @@ export function WikiHome({
     <ScrollView contentContainerStyle={styles.home}>
       <View style={styles.hero}>
         <Text style={styles.eyebrow}>THE OPTIMIZE KNOWLEDGE BASE</Text>
-        <Text style={styles.title}>Knowledge that{String.fromCharCode(10)}moves us forward.</Text>
+        <Text style={styles.title}>Company knowledge</Text>
         <Text style={styles.intro}>
-          One place for our products, our processes, and what we learn along the way.
+          Find product information and processes, or write an article for your team.
         </Text>
         <View style={styles.heroActions}>
           <Button

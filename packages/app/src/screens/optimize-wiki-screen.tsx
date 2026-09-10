@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useRef, type ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
-import { Plus, Pencil, ArrowLeft, Star, History } from "lucide-react-native";
+import { Plus, Pencil, ArrowLeft, Star, History, Trash2 } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { DaemonClient } from "@getpaseo/client/internal/daemon-client";
 import type { WikiPage, WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
@@ -15,7 +15,10 @@ import { useFetchQuery } from "@/data/query";
 import { queryClient } from "@/data/query-client";
 import { WikiEditor, type WikiNewPage } from "@/wiki/wiki-editor";
 import { WikiDocument } from "@/wiki/wiki-document";
-import { WikiGraph } from "@/wiki/wiki-graph";
+import { WikiTrash } from "@/wiki/wiki-trash";
+import { WikiDraftList } from "@/wiki/wiki-draft-list";
+import type { WikiDraftEntry } from "@/wiki/wiki-drafts";
+import { confirmDialog } from "@/utils/confirm-dialog";
 import { WikiBreadcrumbs, WikiRelated } from "@/wiki/wiki-navigation";
 
 import { WikiLibrary } from "@/wiki/wiki-library";
@@ -67,7 +70,7 @@ interface WikiHostProps {
 }
 function WikiHost({ serverId, active, onEditingChange }: WikiHostProps) {
   const runtime = useHostRuntimeSnapshot(serverId);
-  const supportsWiki = useHostFeature(serverId, "optimizeWikiDocuments");
+  const supportsWiki = useHostFeature(serverId, "optimizeWikiLifecycle");
   const client = runtime?.client;
   const online = runtime?.connectionStatus === "online";
   return (
@@ -100,10 +103,15 @@ function WikiWorkspace({
 }: WikiWorkspaceProps) {
   const compact = useIsCompactFormFactor();
   const [search, setSearch] = useState("");
-  const [graph, setGraph] = useState(false);
+  const [view, setView] = useState<"home" | "trash" | "drafts">("home");
+  const [notice, setNotice] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ page?: WikiPage; initial?: WikiNewPage } | null>(null);
+  const [editor, setEditor] = useState<{
+    page?: WikiPage;
+    initial?: WikiNewPage;
+    draftId: string;
+  } | null>(null);
   const favorites = useWikiFavorites(serverId);
   const enabled = active && online && supportsWiki && Boolean(client);
   const index = useFetchQuery({
@@ -122,7 +130,7 @@ function WikiWorkspace({
   const pages = index.data ?? EMPTY_PAGES;
   const select = useCallback((id: string) => {
     setSelectedId(id);
-    setGraph(false);
+    setView("home");
   }, []);
   const list = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "search", search, offset, connectionEpoch],
@@ -139,7 +147,13 @@ function WikiWorkspace({
   });
   const openEditor = useCallback(
     (page?: WikiPage, initial?: WikiNewPage) => {
-      setEditor({ page, initial });
+      setEditor({
+        page,
+        initial,
+        draftId: page && !initial ? page.id : globalThis.crypto.randomUUID(),
+      });
+      setView("home");
+      setNotice(null);
       onEditingChange(true);
     },
     [onEditingChange],
@@ -152,7 +166,8 @@ function WikiWorkspace({
   const closeEditor = useCallback(() => {
     setEditor(null);
     onEditingChange(false);
-  }, [onEditingChange]);
+    void queryClient.invalidateQueries({ queryKey: ["optimize-wiki-drafts", serverId] });
+  }, [onEditingChange, serverId]);
   const onSaved = useCallback(
     (saved: WikiPage) => {
       queryClient.setQueryData(
@@ -161,6 +176,8 @@ function WikiWorkspace({
       );
       void queryClient.invalidateQueries({ queryKey: ["optimize-wiki", serverId] });
       setSelectedId(saved.id);
+      setView("home");
+      setNotice("Page saved. Available to your team and the assistant.");
       closeEditor();
     },
     [serverId, connectionEpoch, closeEditor],
@@ -171,13 +188,40 @@ function WikiWorkspace({
   }, []);
   const back = useCallback(() => {
     setSelectedId(null);
-    setGraph(false);
+    setView("home");
   }, []);
-  const showGraph = useCallback(() => {
+  const showTrash = useCallback(() => {
     setSelectedId(null);
-    setGraph(true);
+    setView("trash");
+    setNotice(null);
   }, []);
-  const showDetails = Boolean(editor || selectedId || graph);
+  const showDrafts = useCallback(() => {
+    setSelectedId(null);
+    setView("drafts");
+    setNotice(null);
+  }, []);
+  const openDraft = useCallback(
+    async (entry: WikiDraftEntry) => {
+      if (!entry.draft) throw new Error("This draft could not be read. Its data has been kept.");
+      let page = entry.draft.page;
+      if (page && client && online) {
+        const current = await client.readWiki(page.id);
+        if (!current.ok) throw new Error(current.error.message);
+        page = current.page;
+      }
+      setEditor({ page, draftId: entry.id });
+      setView("home");
+      onEditingChange(true);
+    },
+    [client, online, onEditingChange],
+  );
+  const archived = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["optimize-wiki", serverId] });
+    setSelectedId(null);
+    setView("home");
+    setNotice("Page moved to Trash. You can restore it at any time.");
+  }, [serverId]);
+  const showDetails = Boolean(editor || selectedId || view !== "home");
   const library = useMemo(
     () => (
       <WikiLibrary
@@ -190,7 +234,8 @@ function WikiWorkspace({
         selectedId={selectedId}
         onOpen={select}
         onHome={back}
-        onGraph={showGraph}
+        onTrash={showTrash}
+        onDrafts={showDrafts}
         search={search}
         onSearch={changeSearch}
         offset={offset}
@@ -211,7 +256,8 @@ function WikiWorkspace({
       selectedId,
       select,
       back,
-      showGraph,
+      showTrash,
+      showDrafts,
       search,
       changeSearch,
       offset,
@@ -224,7 +270,8 @@ function WikiWorkspace({
       <View style={styles.detail}>
         {editor && (
           <WikiEditor
-            key={editor.page?.id ?? "new"}
+            key={editor.draftId}
+            draftId={editor.draftId}
             page={editor.page}
             initial={editor.initial}
             pages={pages}
@@ -248,17 +295,22 @@ function WikiWorkspace({
             favorite={favorites.ids.includes(selectedId)}
             onFavorite={favorites.toggle}
             onBack={back}
+            onArchived={archived}
             pages={pages}
             onOpen={select}
           />
         )}
-        {graph && !editor && (
-          <>
-            <Button size="sm" variant="ghost" onPress={back}>
-              Wiki home
-            </Button>
-            <WikiGraph pages={pages} onOpen={select} />
-          </>
+        {view === "trash" && !editor && (
+          <WikiTrash
+            serverId={serverId}
+            client={client}
+            online={enabled}
+            onRestored={onSaved}
+            onBack={back}
+          />
+        )}
+        {view === "drafts" && !editor && (
+          <WikiDraftList serverId={serverId} onOpen={openDraft} onBack={back} />
         )}
         {!showDetails && (
           <WikiHome
@@ -288,13 +340,20 @@ function WikiWorkspace({
       favorites.toggle,
       back,
       select,
-      graph,
+      view,
+      openDraft,
+      archived,
       showDetails,
     ],
   );
   return (
     <View style={styles.content}>
       <WikiConnectionNotice online={online} supportsWiki={supportsWiki} error={index.error} />
+      {notice && !editor && (
+        <Text style={styles.notice} testID="wiki-save-notice">
+          {notice}
+        </Text>
+      )}
       <WikiColumns compact={compact} showDetails={showDetails} library={library} detail={detail} />
     </View>
   );
@@ -332,6 +391,7 @@ interface WikiReaderProps {
   favorite: boolean;
   onFavorite: (id: string) => void;
   onBack: () => void;
+  onArchived: () => void;
 }
 function WikiReader({
   pages,
@@ -347,9 +407,14 @@ function WikiReader({
   favorite,
   onFavorite,
   onBack,
+  onArchived,
 }: WikiReaderProps) {
   const scroll = useRef<ScrollView>(null);
   const [history, setHistory] = useState(false);
+  const [archiveState, setArchiveState] = useState<{ pending: boolean; error: string | null }>({
+    pending: false,
+    error: null,
+  });
   const toggleHistory = useCallback(() => setHistory((value) => !value), []);
   const toggleFavorite = useCallback(() => onFavorite(id), [onFavorite, id]);
   const newChild = useCallback(() => onNew({ parentId: id }), [onNew, id]);
@@ -376,6 +441,34 @@ function WikiReader({
     },
     [query.data, onEdit],
   );
+  const archive = useCallback(async () => {
+    if (!query.data || !client) return;
+    if (
+      !(await confirmDialog({
+        title: `Move “${query.data.title}” to Trash?`,
+        message:
+          "The article and its history can be restored at any time. Subpages remain available at Wiki home. Links to this article will become available again when it is restored.",
+        confirmLabel: "Move to Trash",
+        destructive: true,
+      }))
+    )
+      return;
+    setArchiveState({ pending: true, error: null });
+    try {
+      const result = await client.archiveWiki({
+        id,
+        expectedRevision: query.data.revision,
+        archived: true,
+      });
+      if (!result.ok) throw new Error(result.error.message);
+      onArchived();
+    } catch (error) {
+      setArchiveState({
+        pending: false,
+        error: error instanceof Error ? error.message : "Could not move this article to Trash.",
+      });
+    }
+  }, [query.data, client, id, onArchived]);
   const refetchPage = query.refetch;
   const retry = useCallback(() => {
     void refetchPage();
@@ -391,6 +484,16 @@ function WikiReader({
           <Text style={styles.eyebrow}>OPTIMIZE WIKI</Text>
         )}
         <View style={styles.actions}>
+          <Button
+            size="sm"
+            variant="ghost"
+            leftIcon={Trash2}
+            onPress={archive}
+            disabled={!enabled || !query.data || archiveState.pending}
+            loading={archiveState.pending}
+            accessibilityLabel="Move page to Trash"
+            testID="wiki-trash-page"
+          />
           <Button
             size="sm"
             variant={favorite ? "secondary" : "ghost"}
@@ -422,6 +525,7 @@ function WikiReader({
           </Button>
         </View>
       </View>
+      {archiveState.error && <Text style={styles.error}>{archiveState.error}</Text>}
       <WikiBreadcrumbs id={id} pages={pages} onOpen={onOpen} onHome={onBack} />
       {history && query.data && client && enabled && (
         <WikiHistory
@@ -562,7 +666,11 @@ function WikiConnectionNotice({
   if (!online)
     return <Text style={styles.notice}>Reconnecting to Optimize… Your draft is kept.</Text>;
   if (!supportsWiki)
-    return <Text style={styles.notice}>Update this Optimize host to use the connected Wiki.</Text>;
+    return (
+      <Text style={styles.notice}>
+        Update this Optimize host to use the Wiki with drafts and recoverable Trash.
+      </Text>
+    );
   if (error) return <Text style={styles.notice}>{error.message}</Text>;
   return null;
 }

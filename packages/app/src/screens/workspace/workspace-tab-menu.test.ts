@@ -45,13 +45,10 @@ describe("buildWorkspaceTabMenuEntries", () => {
     });
 
     expect(entries.filter((entry) => entry.kind === "item").map((entry) => entry.label)).toEqual([
-      "Copy resume command",
-      "Copy agent id",
       "Rename",
       "Close to the left",
       "Close to the right",
       "Close other tabs",
-      "Reload agent",
       "Close",
     ]);
   });
@@ -76,13 +73,10 @@ describe("buildWorkspaceTabMenuEntries", () => {
     });
 
     expect(entries.filter((entry) => entry.kind === "item").map((entry) => entry.label)).toEqual([
-      "Copy resume command",
-      "Copy agent id",
       "Rename",
       "Close tabs above",
       "Close tabs below",
       "Close other tabs",
-      "Reload agent",
       "Close",
     ]);
   });
@@ -121,7 +115,7 @@ describe("buildWorkspaceTabMenuEntries", () => {
     expect(entries.some((entry) => entry.kind === "separator")).toBe(false);
   });
 
-  it("adds reload tooltip copy for agent tabs", () => {
+  it("does not expose runtime administration in conversation menus", () => {
     const entries = buildWorkspaceTabMenuEntries({
       surface: "desktop",
       tab: createAgentTab(),
@@ -140,13 +134,7 @@ describe("buildWorkspaceTabMenuEntries", () => {
       onCloseOtherTabs: vi.fn(),
     });
 
-    expect(entries).toContainEqual(
-      expect.objectContaining({
-        kind: "item",
-        key: "reload-agent",
-        tooltip: "Reload agent to update skills, MCPs or login status.",
-      }),
-    );
+    expect(entries).not.toContainEqual(expect.objectContaining({ key: "reload-agent" }));
   });
 
   it("invokes onRenameTab when the rename entry is selected for agent tabs", () => {
@@ -179,7 +167,7 @@ describe("buildWorkspaceTabMenuEntries", () => {
     expect(onRenameTab).toHaveBeenCalledWith(tab);
   });
 
-  it("includes copy id and rename for terminal tabs", () => {
+  it("keeps legacy terminal tabs manageable without runtime identifiers", () => {
     const onRenameTab = vi.fn();
     const onCopyTerminalId = vi.fn();
     const terminalTab: WorkspaceTabDescriptor = {
@@ -207,21 +195,12 @@ describe("buildWorkspaceTabMenuEntries", () => {
     });
 
     const labels = entries.filter((entry) => entry.kind === "item").map((entry) => entry.label);
-    expect(labels[0]).toBe("Copy terminal id");
-    expect(labels[1]).toBe("Rename");
+    expect(labels[0]).toBe("Rename");
+    expect(labels).not.toContain("Copy terminal id");
     expect(labels).not.toContain("Copy resume command");
     expect(labels).not.toContain("Copy agent id");
     expect(labels).not.toContain("Copy file path");
     expect(labels).not.toContain("Reload agent");
-
-    const copyTerminalIdEntry = entries.find(
-      (entry) => entry.kind === "item" && entry.key === "copy-terminal-id",
-    );
-    if (!copyTerminalIdEntry || copyTerminalIdEntry.kind !== "item") {
-      throw new Error("Copy terminal id entry missing");
-    }
-    copyTerminalIdEntry.onSelect();
-    expect(onCopyTerminalId).toHaveBeenCalledWith("terminal-abc");
 
     const renameEntry = entries.find((entry) => entry.kind === "item" && entry.label === "Rename");
     if (!renameEntry || renameEntry.kind !== "item") {
@@ -231,7 +210,7 @@ describe("buildWorkspaceTabMenuEntries", () => {
     expect(onRenameTab).toHaveBeenCalledWith(terminalTab);
   });
 
-  it("includes copy file path for file tabs", () => {
+  it("keeps closing existing document tabs without exposing filesystem paths", () => {
     const onCopyFilePath = vi.fn();
     const fileTab: WorkspaceTabDescriptor = {
       key: "file_abc",
@@ -258,20 +237,11 @@ describe("buildWorkspaceTabMenuEntries", () => {
     });
 
     const labels = entries.filter((entry) => entry.kind === "item").map((entry) => entry.label);
-    expect(labels[0]).toBe("Copy file path");
+    expect(labels).not.toContain("Copy file path");
     expect(labels).not.toContain("Copy resume command");
     expect(labels).not.toContain("Copy agent id");
     expect(labels).not.toContain("Rename");
     expect(labels).not.toContain("Reload agent");
-
-    const copyFilePathEntry = entries.find(
-      (entry) => entry.kind === "item" && entry.key === "copy-file-path",
-    );
-    if (!copyFilePathEntry || copyFilePathEntry.kind !== "item") {
-      throw new Error("Copy file path entry missing");
-    }
-    copyFilePathEntry.onSelect();
-    expect(onCopyFilePath).toHaveBeenCalledWith("/some/path.ts");
   });
 
   it("uses a Changes close id for the working diff tab", () => {

@@ -114,6 +114,7 @@ export function toAgentPayload(
     cwd: agent.cwd,
     ...(agent.workspaceId ? { workspaceId: agent.workspaceId } : {}),
     model: agent.config.model ?? null,
+    ...(agent.config.profileId ? { profileId: agent.config.profileId } : {}),
     thinkingOptionId,
     effectiveThinkingOptionId,
     ...(runtimeInfo ? { runtimeInfo } : {}),
@@ -223,6 +224,7 @@ export function buildStoredAgentPayload(
     cwd: record.cwd,
     ...(record.workspaceId ? { workspaceId: record.workspaceId } : {}),
     model: record.config?.model ?? null,
+    ...(record.config?.profileId ? { profileId: record.config.profileId } : {}),
     thinkingOptionId: record.config?.thinkingOptionId ?? null,
     effectiveThinkingOptionId: resolveEffectiveThinkingOptionId({
       runtimeInfo,
@@ -252,6 +254,7 @@ export function toAgentListItemPayload(agent: AgentSnapshotPayload): AgentListIt
   return {
     id: agent.id,
     shortId: agent.id.slice(0, 7),
+    profileId: agent.profileId,
     title: agent.title,
     provider: agent.provider,
     model: agent.runtimeInfo?.model ?? agent.model,
@@ -332,6 +335,7 @@ function buildSerializableConfig(config: AgentSessionConfig): SerializableAgentC
       preapproved: config.toolPolicy.preapproved.map((grant) => ({ ...grant })),
     };
   }
+  if (config.profileId) serializable.profileId = config.profileId;
   if (config.systemPrompt) {
     serializable.systemPrompt = config.systemPrompt;
   }

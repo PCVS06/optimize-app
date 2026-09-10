@@ -82,6 +82,7 @@ export interface AgentProfileFormState {
   icon: string;
   color: string;
   notes: string;
+  systemPrompt: string;
   provider: string;
   modelId: string;
   modeId: string;
@@ -124,6 +125,7 @@ export interface AgentProfileFormModel {
   setName: (value: string) => void;
   setAppearance: (value: { icon: string; color: string }) => void;
   setNotes: (value: string) => void;
+  setSystemPrompt: (value: string) => void;
   setProvider: (providerId: string, display: AgentProfileFormDisplay) => void;
   setModel: (modelId: string, display: AgentProfileFormDisplay | null) => void;
   setMode: (modeId: string, display: AgentProfileFormDisplay | null) => void;
@@ -352,6 +354,7 @@ function buildSubmitValue(state: AgentProfileFormState): AgentProfileValue | nul
     ...(state.thinkingOptionId ? { thinkingOptionId: state.thinkingOptionId } : {}),
     ...(Object.keys(state.featureValues).length > 0 ? { featureValues: state.featureValues } : {}),
     ...(notes ? { notes } : {}),
+    ...(state.systemPrompt.trim() ? { systemPrompt: state.systemPrompt.trim() } : {}),
   };
 }
 
@@ -388,6 +391,7 @@ function buildInitialState(snapshot: AgentProfileFormSnapshot): AgentProfileForm
     icon: profile.icon ?? "",
     color: profile.color ?? "",
     notes: profile.notes ?? "",
+    systemPrompt: profile.systemPrompt ?? "",
     provider,
     modelId,
     modeId: profile.modeId ?? "",
@@ -554,6 +558,7 @@ export function openAgentProfileForm(snapshot: AgentProfileFormSnapshot): AgentP
     setAppearance: (value) =>
       publish((current) => ({ ...current, icon: value.icon, color: value.color })),
     setNotes: (value) => publish((current) => ({ ...current, notes: value })),
+    setSystemPrompt: (value) => publish((current) => ({ ...current, systemPrompt: value })),
     setProvider: (providerId, display) =>
       publish((current) => {
         if (current.provider === providerId) {

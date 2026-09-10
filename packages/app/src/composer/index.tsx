@@ -136,7 +136,6 @@ import { useForgeSearchQuery } from "@/git/use-forge-search-query";
 import { useCheckoutStatusQuery } from "@/git/use-status-query";
 import { useCheckoutPrStatusQuery } from "@/git/use-pr-status-query";
 import { getForgePresentation } from "@/git/forge";
-import { ForgeBrandIcon } from "@/git/forge-icon";
 import { useComposerForgeAutoAttach } from "./forge-auto-attach";
 import { readClipboardImage } from "./clipboard-image";
 import { normalizeNativePastedImages, type NativePastedFile } from "./native-pasted-image";
@@ -1248,7 +1247,7 @@ function ComposerContentImpl({
     isConnected,
     serverId,
     cwd,
-    supportsForgeSearch,
+    supportsForgeSearch: false,
     setAttachments: setSelectedAttachments,
     onChangeRequestDetected: onForgeChangeRequestDetected,
     onChangeRequestAdded: onForgeChangeRequestAutoAttach,
@@ -2089,36 +2088,16 @@ function ComposerContentImpl({
         },
       });
     }
-    items.push(
-      {
-        id: "github",
-        label: t("composer.attachments.addIssueOrPr", {
-          context: forgePresentation.changeRequestContext,
-        }),
-        icon: renderForgeAttachmentIcon(forgePresentation.icon),
-        onSelect: () => {
-          setIsGithubPickerOpen(true);
-        },
+    items.push(...pluginAttachments.menuItems, {
+      id: "file",
+      label: t("composer.attachments.addFile"),
+      icon: <ThemedPaperclip size={ICON_SIZE.md} uniProps={iconForegroundMutedMapping} />,
+      onSelect: () => {
+        void handlePickFile();
       },
-      ...pluginAttachments.menuItems,
-      {
-        id: "file",
-        label: t("composer.attachments.addFile"),
-        icon: <ThemedPaperclip size={ICON_SIZE.md} uniProps={iconForegroundMutedMapping} />,
-        onSelect: () => {
-          void handlePickFile();
-        },
-      },
-    );
+    });
     return items;
-  }, [
-    forgePresentation,
-    handlePasteImage,
-    handlePickFile,
-    handlePickImage,
-    pluginAttachments.menuItems,
-    t,
-  ]);
+  }, [handlePasteImage, handlePickFile, handlePickImage, pluginAttachments.menuItems, t]);
 
   const handleToggleGithubItem = useCallback(
     (item: ForgeSearchItem) => {
@@ -2555,12 +2534,6 @@ const ThemedFileText = withUnistyles(FileText);
 const iconForegroundMapping = (theme: Theme) => ({ color: theme.colors.foreground });
 const iconForegroundMutedMapping = (theme: Theme) => ({ color: theme.colors.foregroundMuted });
 const iconAccentForegroundMapping = (theme: Theme) => ({ color: theme.colors.accentForeground });
-
-function renderForgeAttachmentIcon(icon: string): ReactElement {
-  return (
-    <ForgeBrandIcon iconKind={icon} size={ICON_SIZE.md} uniProps={iconForegroundMutedMapping} />
-  );
-}
 
 const githubPrPillIcon = (
   <ThemedGitPullRequest size={ICON_SIZE.sm} uniProps={iconForegroundMutedMapping} />

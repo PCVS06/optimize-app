@@ -505,6 +505,7 @@ export interface AgentSessionConfig {
    * Mapped by each provider to its native instruction field.
    */
   systemPrompt?: string;
+  profileId?: string;
   modeId?: string;
   model?: string;
   thinkingOptionId?: string;

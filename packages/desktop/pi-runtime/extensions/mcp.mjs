@@ -52,7 +52,7 @@ export function registerMcp(pi) {
 
 function registerRemoteTool(pi, client, name, tool) {
   // The company app exposes knowledge and browser tools from its own host.
-  if (name === "paseo" && !/^(optimize_wiki_|browser_)/.test(tool.name)) return;
+  if (name === "paseo" && !/^(optimize_wiki_|optimize_memory_|browser_)/.test(tool.name)) return;
   const toolName =
     name === "paseo" ? tool.name : `${name}_${tool.name}`.replace(/[^a-zA-Z0-9_-]/g, "_");
   pi.registerTool({

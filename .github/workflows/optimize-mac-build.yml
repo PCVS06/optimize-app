@@ -46,6 +46,8 @@ jobs:
           src/server/optimize-config.test.ts
           src/server/optimize-project-instructions.test.ts
           src/server/optimize-wiki.test.ts
+          src/server/optimize-company-chats.test.ts
+          src/server/optimize-memory.test.ts
           src/server/authorization/index.test.ts
           src/server/session/daemon/npm-global-cli.test.ts
           src/server/agent/providers/pi/agent.test.ts
@@ -54,7 +56,7 @@ jobs:
           --bail=1
       - name: Verify instruction refresh across conversation lifecycle
         working-directory: packages/server
-        run: npx vitest run src/server/agent/agent-manager.test.ts -t "Optimize company and project instructions|daemon append system prompt" --bail=1
+        run: npx vitest run src/server/agent/agent-manager.test.ts -t "Optimize company and project instructions|Optimize assistant selection|daemon append system prompt" --bail=1
       - name: Verify branded desktop packaging and navigation
         working-directory: packages/desktop
         run: npx vitest run src/daemon/desktop-packaging.test.ts src/agent-navigation.test.ts src/window/window-manager.test.ts --bail=1
@@ -63,7 +65,7 @@ jobs:
         run: npx vitest run src/agent-deep-link.test.ts --bail=1
       - name: Verify appearance
         working-directory: packages/app
-        run: npx vitest run src/styles/theme.test.ts src/provider-selection/provider-selection.test.ts src/components/provider-icons.test.ts src/i18n/resources.test.ts src/utils/project-config-form.test.ts src/wiki/wiki-editor-model.test.ts src/wiki/wiki-structure.test.ts src/wiki/wiki-rich-extensions.test.ts --project=unit --bail=1
+        run: npx vitest run src/styles/theme.test.ts src/provider-selection/provider-selection.test.ts src/components/provider-icons.test.ts src/i18n/resources.test.ts src/utils/project-config-form.test.ts src/wiki/wiki-editor-model.test.ts src/wiki/wiki-structure.test.ts src/wiki/wiki-rich-extensions.test.ts src/wiki/wiki-drafts.test.ts src/company/sidebar-model.test.ts src/workspace-tabs/launcher/internal/catalog.test.ts src/screens/workspace/workspace-tab-menu.test.ts src/agent-profiles/internal/materialize-profile.test.ts src/agent-profiles/internal/profile-form-model.test.ts --project=unit --bail=1
       - name: Bundle and package the Optimize app
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

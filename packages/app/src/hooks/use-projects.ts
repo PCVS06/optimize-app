@@ -86,8 +86,12 @@ function selectProjectHostReplicas(
       return {
         serverId: host.serverId,
         serverName: host.label,
-        workspaces: Array.from(session?.workspaces.values() ?? []),
-        projects: Array.from(session?.projects.values() ?? []),
+        workspaces: Array.from(session?.workspaces.values() ?? []).filter(
+          (workspace) => workspace.companyKind !== "chats",
+        ),
+        projects: Array.from(session?.projects.values() ?? []).filter(
+          (project) => project.companyKind !== "chats",
+        ),
       };
     });
 }

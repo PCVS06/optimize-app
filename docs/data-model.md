@@ -443,6 +443,15 @@ One file per schedule. ID is 8 hex characters.
 
 Array of project records.
 
+Optimize also creates company projects by name. Optional `companyKind` is `project` for a named
+company project or `chats` for the hidden container of conversations outside projects. Missing
+metadata keeps an existing filesystem project intact. Project roots and per-chat working directories
+are allocated under `$PASEO_HOME/company`; names never become filesystem paths. Staff choose no
+folders. Moving a chat changes its `projectId`, keeps its `workspaceId` and `cwd`, and preserves its
+message history. Prompt and memory scope resolves the current registry membership before each turn.
+The private runtime directory may therefore sit under an earlier project's internal path. Never
+infer project membership from that path or move runtime files to reflect a sidebar operation.
+
 | Field                | Type                        | Description                                                                                                                                |
 | -------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `projectId`          | `string`                    | Host-local primary key; new records use opaque `prj_<16 hex>` IDs                                                                          |

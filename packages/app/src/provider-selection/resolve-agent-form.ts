@@ -19,6 +19,7 @@ export interface FormInitialValues {
 }
 
 export interface FormState {
+  profileId?: string;
   provider: AgentProvider | null;
   modeId: string;
   model: string;
@@ -98,6 +99,7 @@ export type AgentFormAction =
     }
   | {
       type: "APPLY_PROFILE_FROM_USER";
+      profileId?: string;
       provider: AgentProvider;
       modelId: string;
       modeId: string;
@@ -562,6 +564,7 @@ function applyProfile(state: AgentFormReducerState, action: ApplyProfileAction) 
     form: {
       ...state.form,
       provider: action.provider,
+      profileId: action.profileId || undefined,
       model: nextModelId,
       modeId: nextModeId,
       thinkingOptionId: nextThinkingOptionId,

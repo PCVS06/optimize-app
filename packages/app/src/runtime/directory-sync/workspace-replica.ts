@@ -150,6 +150,7 @@ export class WorkspaceDirectoryReplica {
       if (!workspace) continue;
       const next = {
         ...workspace,
+        companyKind: project.companyKind,
         projectDisplayName: project.projectDisplayName,
         projectCustomName: project.projectCustomName,
         projectCustomIconRevision: project.projectCustomIconRevision,

@@ -971,6 +971,7 @@ export class DirectorySync {
 function legacyProjectDescriptorFromWorkspace(workspace: WorkspaceDescriptor): ProjectDescriptor {
   return {
     projectId: workspace.projectId,
+    ...(workspace.companyKind ? { companyKind: workspace.companyKind } : {}),
     projectKey: null,
     projectDisplayName: workspace.projectDisplayName,
     projectCustomName: workspace.projectCustomName ?? null,

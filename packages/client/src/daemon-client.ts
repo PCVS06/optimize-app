@@ -1,4 +1,13 @@
-import type { WikiSearchInput, WikiWriteInput } from "@getpaseo/protocol/optimize-wiki";
+import type {
+  MemoryListInput,
+  MemoryWriteInput,
+  MemoryRemoveInput,
+} from "@getpaseo/protocol/optimize-memory";
+import type {
+  WikiSearchInput,
+  WikiWriteInput,
+  WikiArchiveInput,
+} from "@getpaseo/protocol/optimize-wiki";
 import { ProviderSnapshotUpdates } from "./provider-snapshots/index.js";
 import type { SessionEventSubscription } from "@getpaseo/protocol/messages";
 import {
@@ -2308,6 +2317,31 @@ export class DaemonClient {
         cwd,
       },
       responseType: "project.add.response",
+    });
+  }
+
+  async createCompanyProject(name: string, requestId?: string) {
+    return this.sendNamespacedCorrelatedSessionRequest<"company.create_project.response">({
+      requestId,
+      message: { type: "company.create_project.request", name },
+    });
+  }
+
+  async moveCompanyChat(workspaceId: string, projectId?: string, requestId?: string) {
+    return this.sendNamespacedCorrelatedSessionRequest<"company.move_chat.response">({
+      requestId,
+      message: {
+        type: "company.move_chat.request",
+        workspaceId,
+        ...(projectId ? { projectId } : {}),
+      },
+    });
+  }
+
+  async createCompanyChat(projectId?: string, requestId?: string) {
+    return this.sendNamespacedCorrelatedSessionRequest<"company.create_chat.response">({
+      requestId,
+      message: { type: "company.create_chat.request", ...(projectId ? { projectId } : {}) },
     });
   }
 
@@ -4926,6 +4960,24 @@ export class DaemonClient {
     this.sendSessionMessageStrict(response);
   }
 
+  async listMemory(input: MemoryListInput) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "memory.list.request", ...input },
+      responseType: "memory.list.response",
+    });
+  }
+  async writeMemory(input: MemoryWriteInput) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "memory.write.request", ...input },
+      responseType: "memory.write.response",
+    });
+  }
+  async removeMemory(input: MemoryRemoveInput) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "memory.remove.request", ...input },
+      responseType: "memory.remove.response",
+    });
+  }
   async historyWiki(id: string, offset = 0) {
     return this.sendCorrelatedSessionRequest({
       message: { type: "wiki.history.request", id, offset },
@@ -4944,6 +4996,20 @@ export class DaemonClient {
     return this.sendCorrelatedSessionRequest({
       message: { type: "wiki.index.request" },
       responseType: "wiki.index.response",
+    });
+  }
+
+  async trashWiki(input: WikiSearchInput = {}) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.trash.request", ...input },
+      responseType: "wiki.trash.response",
+    });
+  }
+
+  async archiveWiki(input: WikiArchiveInput) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.archive.request", ...input },
+      responseType: "wiki.archive.response",
     });
   }
 

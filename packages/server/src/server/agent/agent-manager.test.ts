@@ -2193,6 +2193,60 @@ test("Optimize company and project instructions refresh on create, reload, and r
   expect(requestedWorkspaces).toEqual(["support-chat", "support-chat", "support-chat"]);
 });
 
+test("Optimize assistant selection and memory refresh on each turn and survive reload", async () => {
+  const workdir = mkdtempSync(join(tmpdir(), "optimize-assistant-memory-"));
+  const storage = new AgentStorage(join(workdir, "agents"), logger);
+  const updates: string[] = [];
+  class PromptSession extends TestAgentSession {
+    async updateSystemPrompt(prompt: string) {
+      updates.push(prompt);
+    }
+  }
+  class PromptClient extends TestAgentClient {
+    async createSession(config: AgentSessionConfig) {
+      this.createdConfigs.push(config);
+      return new PromptSession(config);
+    }
+  }
+  const client = new PromptClient();
+  let profile = "Support role";
+  let memory = "Fact v1";
+  let project = "Support project";
+  const manager = new AgentManager({
+    clients: { codex: client },
+    registry: storage,
+    logger,
+    appendSystemPrompt: "Company rule",
+    resolveProfileSystemPrompt: (id) => (id === "support" ? profile : undefined),
+    resolveProjectSystemPrompt: async () => project,
+    resolveMemoryContext: async () => memory,
+  });
+  const agent = await manager.createAgent(
+    { provider: "codex", cwd: workdir, profileId: "support" },
+    undefined,
+    { workspaceId: "chat" },
+  );
+  await manager.runAgent(agent.id, "First question");
+  expect(updates.at(-1)).toContain("Support role");
+  profile = "Updated support role";
+  memory = "Fact v2";
+  project = "Moved project";
+  await manager.runAgent(agent.id, "Second question");
+  expect(updates.at(-1)).toContain(profile);
+  expect(updates.at(-1)).toContain(memory);
+  expect(updates.at(-1)).toContain(project);
+  expect(updates.at(-1)).not.toContain("Fact v1");
+  expect((await storage.get(agent.id))?.config?.profileId).toBe("support");
+  await manager.setAgentProfile(agent.id, null);
+  await manager.runAgent(agent.id, "General assistant now");
+  expect(updates.at(-1)).not.toContain(profile);
+  await manager.setAgentProfile(agent.id, "support");
+  await manager.reloadAgentSession(agent.id);
+  expect(client.resumeOverrides.at(-1)?.daemonAppendSystemPrompt).toContain(profile);
+  expect(client.resumeOverrides.at(-1)?.profileId).toBe("support");
+  await manager.closeAgent(agent.id);
+});
+
 test("setAgentMode persists the selected mode across session reload", async () => {
   const workdir = mkdtempSync(join(tmpdir(), "agent-manager-test-"));
   const storagePath = join(workdir, "agents");

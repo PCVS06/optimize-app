@@ -26,6 +26,7 @@ export interface AgentConfigSessionHost {
  */
 export interface AgentConfigOperations {
   ensureLoaded(agentId: string): Promise<void>;
+  setProfile?(agentId: string, profileId: string | null): Promise<void>;
   setMode(agentId: string, modeId: string): Promise<AgentProviderNotice | null>;
   setModel(agentId: string, modelId: string | null): Promise<void>;
   setFeature(agentId: string, featureId: string, value: unknown): Promise<void>;
@@ -188,6 +189,11 @@ export class AgentConfigSession {
     if (config.thinkingOptionId !== undefined) {
       const thinkingNotice = await this.operations.setThinking(agentId, config.thinkingOptionId);
       notice ??= thinkingNotice;
+    }
+    if (config.profileId !== undefined) {
+      if (!this.operations.setProfile)
+        throw new Error("Update the host to apply assistant instructions.");
+      await this.operations.setProfile(agentId, config.profileId);
     }
     for (const [featureId, value] of Object.entries(config.featureValues ?? {})) {
       await this.operations.setFeature(agentId, featureId, value);

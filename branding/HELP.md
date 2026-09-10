@@ -1,27 +1,41 @@
-# Optimize help
+# Using Optimize
 
-Optimize is your workspace for product knowledge, support drafts, and operations.
+Optimize helps with company knowledge, customer replies, documents and daily work.
 
-## Start a conversation
+## Start with a chat
 
-Choose **Add project** and select a folder for your work. Open the project and choose **Start a conversation**, select a connected model, and send your request. The Optimize emblem animates while the assistant is working. Project groups in the sidebar keep related conversations together.
+Choose **New chat** and write what you need. A chat does not need a project or a folder. Attach documents or images with the attachment button. The Optimize emblem animates while the assistant works.
 
-## Set instructions
+If your administrator has configured several assistants, choose the one suited to your work by name. Model and tool setup lives in Engineering.
 
-**Settings → Assistant → Company instructions** defines the assistant’s role, tone, sources, and working rules for every project on this Mac. These settings are local to the connected host; they are not automatically synchronized between employees’ Macs.
+## Organize a project
 
-**Settings → Projects → your project → Project instructions** adds instructions for that project. Company instructions remain in effect. A blank project prompt inherits the company instructions. Instructions apply when a conversation is created, reloaded, or resumed after the runtime closes; editing a prompt does not interrupt a running conversation.
+Choose **+** beside **Projects**, enter a name and create it. Use **New chat** inside that project to keep related conversations together. The chat options menu lets you rename, pin, archive or **Move to project**. Choose **Outside projects** to return a conversation to the main Chats list.
 
-## Models and tools
+Project settings contain **Project instructions**: the purpose, preferred sources and how the assistant should work for that project. No folder selection is needed for company projects. Existing folder-based projects remain available.
 
-**Settings → Models** manages model access. **Extensions** adds capabilities. Files and browser tabs can support a conversation. **More tools** reveals terminal and development views when needed. Technical settings, connections, and diagnostics are under **Advanced**.
+## Keep company knowledge in the Wiki
 
-Shopify, Gorgias, and company documents are not connected in this review build. The assistant can prepare drafts from files and information you provide. A draft is not a sent customer reply or a completed business action.
+The book icon beside Help and Settings opens **Optimize Wiki**. Create an article, give it a title and write directly in the editor. Use the formatting bar or type `/` to insert headings, lists and other blocks. **Link article** connects related pages. A parent page groups articles into a knowledge area; headings build the article's contents list.
 
-## Manage work and updates
+Drafts remain on your Mac until you publish them. Find unfinished work under **Your drafts**. Published articles can be searched and read by the assistant. The assistant's Wiki skill guides article structure, sources and publication; a draft requested in chat is not automatically published.
 
-**History** reopens previous conversations. **Schedules** manages recurring tasks. Use project and conversation actions to organize or archive completed work.
+Article history lets you inspect older versions and restore one as a new draft. **Trash** keeps deleted articles and their history until you restore them. Deleted articles are excluded from the assistant's current knowledge. If another person changes an article while you edit, review their latest version before publishing.
 
-**Appearance** controls colors and text size. **About** shows the app version, updates, and licenses. **Help → Report a problem** opens an issue in the Optimize repository. Review any diagnostic files before sharing them.
+## Manage memory
 
-Optimize updates come from [PCVS06/optimize-app](https://github.com/PCVS06/optimize-app/releases). Device pairing remains optional in Advanced settings.
+Open **Settings → Memory** to add, search, edit or forget saved facts and preferences. Choose **Company — all chats** for information that should apply everywhere, or choose a project for context limited to that project. You can also explicitly ask the assistant to remember something and name the scope.
+
+Company memory is shared context on the connected Optimize host, not a private notebook. Chat history remains separate. The assistant does not automatically copy private mail or conversations into company memory. Changes are read from the next message.
+
+## Technical setup
+
+The person responsible for setup uses **Settings → Engineering**. This is where company system prompts, assistant profiles and their individual system prompts, context settings, model access, extensions and integrations are configured. Project instructions and assistant prompts add to the company instructions. Prompt changes apply from the next message without interrupting the current answer.
+
+Microsoft 365 requires your company's own Microsoft Entra registration and each employee's sign-in. Computer use requires macOS permissions and consent for the conversation. [Integration setup](../docs/optimize-integrations.md) describes the connection steps and current limits.
+
+## Sharing and updates
+
+People connected to the same Optimize host use its published Wiki and shared memory. Separate local installations do not automatically synchronize their data. A shared company host, employee sign-in and access roles need a separate rollout setup.
+
+**About** shows the version and licenses. Help opens support in your Optimize repository. Updates come from [PCVS06/optimize-app](https://github.com/PCVS06/optimize-app/releases). The current Mac package is an internal review build; production signing and notarization are still required for distribution.

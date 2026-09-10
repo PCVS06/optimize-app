@@ -242,6 +242,7 @@ interface PiRpcAgentSessionOptions {
   capabilities: AgentCapabilityFlags;
   currentModeId?: string | null;
   cleanup?: () => void;
+  updateSystemPrompt?: (prompt: string) => void;
   extensionTimeoutMs?: number;
   logger: Logger;
   usagePollScheduler?: PiUsagePollScheduler;
@@ -614,9 +615,15 @@ function createPiMcpConfigFile(
   };
 }
 
-function createPiPaseoExtensionFile(systemPrompt?: string): PiTempFile {
+function createPiPaseoExtensionFile(
+  systemPrompt?: string,
+): PiTempFile & { updateSystemPrompt: (prompt: string) => void } {
   const dir = mkdtempSync(join(tmpdir(), "paseo-pi-extension-"));
   const filePath = join(dir, "paseo-integration.mjs");
+  const promptPath = join(dir, "instructions.txt");
+  const updateSystemPrompt = (prompt: string) =>
+    writeFileSync(promptPath, prompt, { encoding: "utf8", mode: 0o600 });
+  updateSystemPrompt(systemPrompt ?? "");
   writeFileSync(
     filePath,
     `
@@ -692,13 +699,11 @@ function createPiPaseoExtensionFile(systemPrompt?: string): PiTempFile {
 	    }
 	  }
 
-	  ${
-      systemPrompt
-        ? `pi.on("before_agent_start", async (event) => ({
-	    systemPrompt: event.systemPrompt + "\\n\\n" + ${JSON.stringify(systemPrompt)},
-	  }));`
-        : ""
-    }
+	  pi.on("before_agent_start", async (event) => {
+        const { readFileSync } = await import("node:fs");
+        const instructions = readFileSync(${JSON.stringify(promptPath)}, "utf8");
+        return { systemPrompt: event.systemPrompt + "\\n\\n" + instructions };
+      });
 
 	  pi.on("session_start", async (_event, ctx) => {
 	    emitEntryCapture(ctx, "session_start");
@@ -750,6 +755,7 @@ function createPiPaseoExtensionFile(systemPrompt?: string): PiTempFile {
   );
   return {
     path: filePath,
+    updateSystemPrompt,
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 }
@@ -1271,6 +1277,7 @@ export class PiRpcAgentSession implements AgentSession {
     this.provider = PI_PROVIDER;
     this.currentModeId = options.currentModeId ?? null;
     this.cleanup = options.cleanup;
+    this.writeSystemPrompt = options.updateSystemPrompt;
     this.lastKnownThinkingOptionId =
       normalizePiThinkingOption(options.config.thinkingOptionId) ??
       this.state.thinkingLevel ??
@@ -1300,6 +1307,11 @@ export class PiRpcAgentSession implements AgentSession {
 
   private readonly runtimeSession: PiRuntimeSession;
   private readonly config: AgentSessionConfig;
+  private readonly writeSystemPrompt?: (prompt: string) => void;
+
+  async updateSystemPrompt(prompt: string): Promise<void> {
+    this.writeSystemPrompt?.(prompt);
+  }
   private readonly cleanup?: () => void;
   private readonly extensionTimeoutMs: number;
 
@@ -2562,6 +2574,7 @@ export class PiRpcAgentClient implements AgentClient {
         initialState: await runtimeSession.getState(),
         capabilities: capabilitiesForSession(mcpConfig !== null),
         cleanup: combineCleanup([mcpConfig?.cleanup, paseoExtension?.cleanup]),
+        updateSystemPrompt: paseoExtension.updateSystemPrompt,
         extensionTimeoutMs: this.providerParams.extensionTimeoutMs,
         logger: this.logger,
         usagePollScheduler: this.usagePollScheduler,
@@ -2625,6 +2638,7 @@ export class PiRpcAgentClient implements AgentClient {
         initialState: await runtimeSession.getState(),
         capabilities: capabilitiesForSession(mcpConfig !== null),
         cleanup: combineCleanup([mcpConfig?.cleanup, paseoExtension?.cleanup]),
+        updateSystemPrompt: paseoExtension.updateSystemPrompt,
         extensionTimeoutMs: this.providerParams.extensionTimeoutMs,
         logger: this.logger,
         usagePollScheduler: this.usagePollScheduler,

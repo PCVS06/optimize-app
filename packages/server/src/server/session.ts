@@ -1,3 +1,9 @@
+import { OptimizeMemorySession } from "./session/optimize-memory-session.js";
+import {
+  createCompanyChat,
+  createCompanyProject,
+  moveCompanyChat,
+} from "./optimize-company-chats.js";
 import { OptimizeWikiSession } from "./session/optimize-wiki-session.js";
 import type { SessionEventSubscription } from "@getpaseo/protocol/messages";
 import type { AgentRequests } from "./agent/requests/index.js";
@@ -752,6 +758,7 @@ export class Session {
   private readonly workspaceFilesSession: WorkspaceFilesSession;
   private readonly agentConfigSession: AgentConfigSession;
   private readonly projectConfigSession: ProjectConfigSession;
+  private readonly optimizeMemorySession: OptimizeMemorySession;
   private readonly optimizeWikiSession: OptimizeWikiSession;
   private readonly daemonSession: DaemonSession;
   private readonly hubExecutionController: HubExecutionController | null;
@@ -956,12 +963,18 @@ export class Session {
         setMode: async (agentId, modeId) =>
           (await setAgentModeCommand({ agentManager }, { agentId, modeId })).notice,
         setModel: (agentId, modelId) => agentManager.setAgentModel(agentId, modelId),
+        setProfile: (agentId, profileId) => agentManager.setAgentProfile(agentId, profileId),
         setFeature: (agentId, featureId, value) =>
           agentManager.setAgentFeature(agentId, featureId, value),
         setThinking: (agentId, thinkingOptionId) =>
           agentManager.setAgentThinkingOption(agentId, thinkingOptionId),
       },
       logger: this.sessionLogger,
+    });
+    this.optimizeMemorySession = new OptimizeMemorySession({
+      paseoHome: this.paseoHome,
+      projects: this.projectRegistry,
+      emit: (msg) => this.emit(msg),
     });
     this.optimizeWikiSession = new OptimizeWikiSession({
       paseoHome: this.paseoHome,
@@ -2030,6 +2043,7 @@ export class Session {
       this.dispatchWorkspaceStateMessage(msg) ??
       this.dispatchWorkspaceLabelMessage(msg) ??
       this.dispatchWorkspaceSetupMessage(msg) ??
+      this.dispatchCompanyChatMessage(msg) ??
       this.dispatchWorkspaceAndProjectMessage(msg)
     );
   }
@@ -2440,6 +2454,12 @@ export class Session {
 
   private dispatchWikiMessage(msg: SessionInboundMessage): Promise<void> | undefined {
     switch (msg.type) {
+      case "wiki.trash.request":
+      case "wiki.archive.request":
+      case "memory.list.request":
+      case "memory.write.request":
+      case "memory.remove.request":
+        return this.optimizeMemorySession.handle(msg);
       case "wiki.history.request":
       case "wiki.revision.request":
       case "wiki.index.request":
@@ -2565,6 +2585,19 @@ export class Session {
         return this.checkoutSession.handleStashPopRequest(msg);
       case "stash_list_request":
         return this.checkoutSession.handleStashListRequest(msg);
+      default:
+        return undefined;
+    }
+  }
+
+  private dispatchCompanyChatMessage(msg: SessionInboundMessage): Promise<void> | undefined {
+    switch (msg.type) {
+      case "company.create_project.request":
+        return this.handleCompanyCreateProject(msg);
+      case "company.move_chat.request":
+        return this.handleCompanyMoveChat(msg);
+      case "company.create_chat.request":
+        return this.handleCompanyCreateChat(msg);
       default:
         return undefined;
     }
@@ -5014,6 +5047,7 @@ export class Session {
     return {
       id: workspace.workspaceId,
       projectId: workspace.projectId,
+      companyKind: resolvedProjectRecord?.companyKind,
       projectDisplayName: resolvedProjectRecord
         ? resolveProjectDisplayName(resolvedProjectRecord)
         : workspace.projectId,
@@ -5281,6 +5315,7 @@ export class Session {
     const icon = await this.projectIcons.snapshot(project);
     return {
       projectId: project.projectId,
+      ...(project.companyKind ? { companyKind: project.companyKind } : {}),
       ...(project.projectKey ? { projectKey: project.projectKey } : {}),
       projectDisplayName: resolveProjectDisplayName(project),
       projectCustomName: project.customName ?? null,
@@ -6408,6 +6443,109 @@ export class Session {
           requestId: request.requestId,
           project: null,
           error: message,
+        },
+      });
+    }
+  }
+
+  private async handleCompanyCreateProject(
+    request: Extract<SessionInboundMessage, { type: "company.create_project.request" }>,
+  ): Promise<void> {
+    try {
+      const project = await createCompanyProject(
+        {
+          paseoHome: this.paseoHome,
+          projects: this.projectRegistry,
+          workspaces: this.workspaceRegistry,
+        },
+        request.name,
+      );
+      this.emit({
+        type: "company.create_project.response",
+        payload: {
+          requestId: request.requestId,
+          project: await this.buildProjectDescriptor(project),
+          error: null,
+        },
+      });
+    } catch (error) {
+      this.emit({
+        type: "company.create_project.response",
+        payload: {
+          requestId: request.requestId,
+          project: null,
+          error: error instanceof Error ? error.message : "Could not create project.",
+        },
+      });
+    }
+  }
+
+  private async handleCompanyCreateChat(
+    request: Extract<SessionInboundMessage, { type: "company.create_chat.request" }>,
+  ): Promise<void> {
+    try {
+      const { project, workspace } = await createCompanyChat(
+        {
+          paseoHome: this.paseoHome,
+          projects: this.projectRegistry,
+          workspaces: this.workspaceRegistry,
+        },
+        request.projectId,
+      );
+      const descriptor = await this.describeWorkspaceRecord(workspace, project);
+      this.emit({
+        type: "company.create_chat.response",
+        payload: {
+          requestId: request.requestId,
+          workspace: descriptor,
+          project: await this.buildProjectDescriptor(project),
+          error: null,
+        },
+      });
+    } catch (error) {
+      this.emit({
+        type: "company.create_chat.response",
+        payload: {
+          requestId: request.requestId,
+          workspace: null,
+          project: null,
+          error: error instanceof Error ? error.message : "Could not create chat.",
+        },
+      });
+    }
+  }
+
+  private async handleCompanyMoveChat(
+    request: Extract<SessionInboundMessage, { type: "company.move_chat.request" }>,
+  ): Promise<void> {
+    try {
+      const { project, workspace } = await moveCompanyChat(
+        {
+          paseoHome: this.paseoHome,
+          projects: this.projectRegistry,
+          workspaces: this.workspaceRegistry,
+        },
+        request.workspaceId,
+        request.projectId,
+      );
+      const descriptor = await this.describeWorkspaceRecord(workspace, project);
+      this.emit({
+        type: "company.move_chat.response",
+        payload: {
+          requestId: request.requestId,
+          workspace: descriptor,
+          project: await this.buildProjectDescriptor(project),
+          error: null,
+        },
+      });
+    } catch (error) {
+      this.emit({
+        type: "company.move_chat.response",
+        payload: {
+          requestId: request.requestId,
+          workspace: null,
+          project: null,
+          error: error instanceof Error ? error.message : "Could not move chat.",
         },
       });
     }

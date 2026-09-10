@@ -28,6 +28,7 @@ describe("materializeAgentProfile", () => {
       ),
     ).toEqual({
       provider: "claude",
+      profileId: "ui-work",
       modelId: "claude-opus-5",
       modeId: "plan",
       thinkingOptionId: "think-hard",
@@ -38,6 +39,7 @@ describe("materializeAgentProfile", () => {
   it("treats omitted and blank fields the same", () => {
     expect(materializeAgentProfile(profile({ model: "   ", modeId: "" }))).toEqual({
       provider: "claude",
+      profileId: "ui-work",
       modelId: "",
       modeId: "",
       thinkingOptionId: "",
@@ -66,6 +68,7 @@ describe("toAgentConfigApply", () => {
         ),
       ),
     ).toEqual({
+      profileId: "ui-work",
       modelId: "claude-opus-5",
       modeId: "plan",
       thinkingOptionId: "think-hard",
@@ -76,6 +79,7 @@ describe("toAgentConfigApply", () => {
   it("omits what the profile leaves alone rather than clearing it", () => {
     expect(toAgentConfigApply(materializeAgentProfile(profile({ modeId: "plan" })))).toEqual({
       modeId: "plan",
+      profileId: "ui-work",
     });
   });
 
@@ -116,4 +120,9 @@ describe("reconcileMaterializedProfileMode", () => {
       ]),
     ).toMatchObject({ modeId: "plan" });
   });
+});
+
+it("clears a selected assistant explicitly when returning to Optimize", () => {
+  const reset = materializeAgentProfile(profile({ id: "" }));
+  expect(toAgentConfigApply(reset)).toEqual({ profileId: null });
 });

@@ -145,12 +145,9 @@ function OpenAgentProfileEditModal({
 
   const sheetHeader = useMemo<SheetHeader>(
     () => ({
-      title:
-        mode === "edit"
-          ? t("settings.host.agentProfiles.editProfileTitle")
-          : t("settings.host.agentProfiles.addProfileTitle"),
+      title: mode === "edit" ? "Edit assistant" : "Create assistant",
     }),
-    [mode, t],
+    [mode],
   );
 
   const providerOptions = useMemo(
@@ -245,7 +242,7 @@ function OpenAgentProfileEditModal({
               <FormTextInput
                 initialValue={seed?.name ?? profile?.name ?? ""}
                 onChangeText={model.setName}
-                placeholder={t("settings.host.agentProfiles.namePlaceholder")}
+                placeholder="Customer support"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!state.isSubmitting}
@@ -257,6 +254,22 @@ function OpenAgentProfileEditModal({
           </View>
         </View>
 
+        <Field
+          label="System prompt"
+          hint="The assistant’s role, working rules, tone and boundaries. Company and project instructions take priority. Changes apply to the next message, including existing chats using this assistant."
+        >
+          <FormTextInput
+            initialValue={profile?.systemPrompt ?? ""}
+            onChangeText={model.setSystemPrompt}
+            placeholder="You help Optimize staff answer product questions. Check the Wiki, cite sources and ask when information is missing."
+            multiline
+            numberOfLines={8}
+            style={styles.notesInput}
+            editable={!state.isSubmitting}
+            accessibilityLabel="Assistant system prompt"
+            testID="agent-profile-system-prompt-input"
+          />
+        </Field>
         <SelectField
           label={t("settings.host.agentProfiles.providerLabel")}
           value={state.provider || null}
@@ -350,13 +363,13 @@ function OpenAgentProfileEditModal({
 
         <Field
           label={t("settings.host.agentProfiles.notesLabel")}
-          hint={t("settings.host.agentProfiles.notesHint")}
+          hint="A short description for choosing this assistant. This is not a system prompt."
           testID="agent-profile-notes-field"
         >
           <FormTextInput
             initialValue={profile?.notes ?? ""}
             onChangeText={model.setNotes}
-            placeholder={t("settings.host.agentProfiles.notesPlaceholder")}
+            placeholder="Use for customer enquiries, product advice and support drafts."
             multiline
             numberOfLines={4}
             style={styles.notesInput}

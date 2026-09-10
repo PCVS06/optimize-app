@@ -1,6 +1,6 @@
 # Optimize
 
-A Mac workspace for Optimize’s product knowledge, customer support, and daily operations. Conversations, files, browser tools, company instructions, project instructions, and extensions work together in one branded app.
+A Mac workspace for Optimize’s product knowledge, customer support, and daily operations. Start a chat directly, organize work into named projects, and keep company knowledge in the Wiki and scoped memory. Technical setup is grouped under Engineering.
 
 - [Staff guide](branding/HELP.md)
 - [Changes](branding/CHANGELOG.md)
@@ -28,7 +28,7 @@ A full dependency license review and distribution-notice audit are still require
 
 ## Company Wiki
 
-Open **Optimize Wiki** at the bottom of the sidebar to build the shared knowledge base for staff and the assistant. Pages stay in the connected host’s Optimize data directory, separate from this repository. See [Wiki storage, assistant access, and scope](docs/optimize-wiki.md).
+Open **Optimize Wiki** using the book icon beside Help and Settings to build the shared knowledge base for staff and the assistant. Pages stay in the connected host’s Optimize data directory, separate from this repository. See [Wiki storage, assistant access, and scope](docs/optimize-wiki.md).
 
 ### Embedded Mac runtime
 

@@ -6,8 +6,6 @@ import { View, type StyleProp, type ViewStyle } from "react-native";
 import { SidebarHeaderRow } from "@/components/sidebar/sidebar-header-row";
 import { useShortcutKeys } from "@/hooks/use-shortcut-keys";
 import { PluginSidebarItemRow } from "@/plugins/sidebar-items";
-import { canCreateWorktreeForProjectKind } from "@/projects/host-projects";
-import { useHostFeature } from "@/runtime/host-features";
 import {
   builtinSidebarNavLabelKey,
   builtinSidebarNavShortcutAction,
@@ -15,8 +13,6 @@ import {
 } from "@/sidebar-nav/model";
 import { useSidebarNavItems } from "@/sidebar-nav/use-sidebar-nav-items";
 import { useKeyboardShortcutsStore } from "@/stores/keyboard-shortcuts-store";
-import { useActiveWorkspaceSelection } from "@/stores/navigation-active-workspace-store";
-import { useWorkspace } from "@/stores/session-store-hooks";
 import {
   buildNewWorkspaceRoute,
   buildSchedulesRoute,
@@ -39,12 +35,20 @@ interface SidebarNavRowsProps extends SidebarNavRowProps {
  */
 export function SidebarNavRows({ style, onBeforeNavigate }: SidebarNavRowsProps) {
   const { items } = useSidebarNavItems();
-  const visibleItems = useMemo(() => items.filter((item) => item.visible), [items]);
-
-  if (visibleItems.length === 0) return null;
+  const visibleItems = useMemo(
+    () =>
+      items.filter((item) =>
+        item.kind === "plugin"
+          ? item.visible
+          : item.id !== "new-workspace" && item.id !== "search" && item.visible,
+      ),
+    [items],
+  );
 
   return (
     <View style={style}>
+      <SidebarNewWorkspaceRow onBeforeNavigate={onBeforeNavigate} />
+      <SidebarSearchRow onBeforeNavigate={onBeforeNavigate} />
       {visibleItems.map((item) => {
         if (item.kind === "plugin") {
           return (
@@ -65,42 +69,16 @@ export function SidebarNavRows({ style, onBeforeNavigate }: SidebarNavRowsProps)
 const SidebarNewWorkspaceRow = memo(function SidebarNewWorkspaceRow({
   onBeforeNavigate,
 }: SidebarNavRowProps) {
-  const { t } = useTranslation();
   const shortcutKeys = useShortcutKeys(builtinSidebarNavShortcutAction("new-workspace"));
-  const activeWorkspaceSelection = useActiveWorkspaceSelection();
-  const activeWorkspaceServerId = activeWorkspaceSelection?.serverId ?? null;
-  const activeWorkspaceId = activeWorkspaceSelection?.workspaceId ?? null;
-  const activeWorkspace = useWorkspace(activeWorkspaceServerId, activeWorkspaceId);
-  const supportsWorkspaceMultiplicity = useHostFeature(
-    activeWorkspaceServerId,
-    "workspaceMultiplicity",
-  );
-  const canUseActiveWorkspaceContext = Boolean(
-    activeWorkspace &&
-    (supportsWorkspaceMultiplicity || canCreateWorktreeForProjectKind(activeWorkspace.projectKind)),
-  );
-
   const handlePress = useCallback(() => {
     onBeforeNavigate?.();
-    router.push(
-      activeWorkspaceServerId
-        ? buildNewWorkspaceRoute(
-            activeWorkspace && canUseActiveWorkspaceContext
-              ? {
-                  serverId: activeWorkspaceServerId,
-                  sourceDirectory: activeWorkspace.projectRootPath,
-                  projectId: activeWorkspace.projectId,
-                }
-              : { serverId: activeWorkspaceServerId },
-          )
-        : buildNewWorkspaceRoute(),
-    );
-  }, [activeWorkspace, activeWorkspaceServerId, canUseActiveWorkspaceContext, onBeforeNavigate]);
+    router.push(buildNewWorkspaceRoute());
+  }, [onBeforeNavigate]);
 
   return (
     <SidebarHeaderRow
       icon={Plus}
-      label={t(builtinSidebarNavLabelKey("new-workspace"))}
+      label="New chat"
       onPress={handlePress}
       testID="sidebar-global-new-workspace"
       variant="compact"

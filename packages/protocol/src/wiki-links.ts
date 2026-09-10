@@ -35,8 +35,11 @@ export function resolveWikiLink(input: {
 }): WikiIndexEntry | null {
   const byId = input.pages.find((page) => page.id === input.target);
   if (byId) return byId;
+  const normalized = input.target.trim().toLocaleLowerCase();
   const matches = input.pages.filter(
-    (page) => page.title.trim().toLocaleLowerCase() === input.target.trim().toLocaleLowerCase(),
+    (page) =>
+      page.title.trim().toLocaleLowerCase() === normalized ||
+      page.aliases?.some((alias) => alias.toLocaleLowerCase() === normalized),
   );
   return matches.length === 1 ? matches[0]! : null;
 }

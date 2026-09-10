@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from "react";
 import { ScrollView, Text, View } from "react-native";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
@@ -126,6 +134,7 @@ function RichDocument({
   const [linkMode, setLinkMode] = useState<"link" | "image" | null>(null);
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
   const options = useMemo(
     () =>
       pages.map((page) => ({
@@ -248,11 +257,25 @@ function RichDocument({
   const closeLink = useCallback(() => setLinkMode(null), []);
   const applyUrl = useCallback(() => {
     const value = url.trim();
-    if (!/^https?:\/\//i.test(value)) {
-      setUrlError("Enter a full https:// address.");
+    let address: URL;
+    try {
+      address = new URL(value);
+    } catch {
+      setUrlError("Enter a full, valid web address, for example https://example.com/image.png.");
       return;
     }
-    if (linkMode === "image") editor.chain().focus().setImage({ src: value }).run();
+    if (
+      !["http:", "https:"].includes(address.protocol) ||
+      !address.hostname ||
+      address.username ||
+      address.password
+    ) {
+      setUrlError("Use a public http:// or https:// address without login details.");
+      return;
+    }
+    setImageError(null);
+    if (linkMode === "image")
+      editor.chain().focus().setImage({ src: address.href, alt: "Article image" }).run();
     else if (editor.state.selection.empty)
       editor
         .chain()
@@ -266,6 +289,12 @@ function RichDocument({
     else editor.chain().focus().setLink({ href: value }).run();
     setLinkMode(null);
   }, [editor, linkMode, url]);
+  const imageFailed = useCallback((event: SyntheticEvent<HTMLDivElement>) => {
+    if (event.target instanceof HTMLImageElement)
+      setImageError(
+        "An image could not be loaded. Check that its link opens an image and is accessible to your team. You can select the image and remove it.",
+      );
+  }, []);
   const blockDisplay = useMemo(
     () => ({ label: blocks.find((block) => block.value === current.block)?.label ?? "Text" }),
     [current.block],
@@ -408,7 +437,17 @@ function RichDocument({
           {urlError && <Text style={styles.error}>{urlError}</Text>}
         </View>
       )}
-      <div ref={surface} className="wiki-editor-surface" onKeyDownCapture={onKey}>
+      {imageError && (
+        <Text style={styles.error} testID="wiki-image-error">
+          {imageError}
+        </Text>
+      )}
+      <div
+        ref={surface}
+        className="wiki-editor-surface"
+        onKeyDownCapture={onKey}
+        onErrorCapture={imageFailed}
+      >
         <ThemedEditorContent uniProps={editorColors} editor={editor} />
         {current.slash !== null && commands.length > 0 && !slashDismissed && (
           <ScrollView

@@ -8,8 +8,8 @@ import { useContainerWidthBelow } from "@/hooks/use-container-width";
 import invariant from "tiny-invariant";
 import { Composer } from "@/composer";
 import { FileDropZone } from "@/components/file-drop/file-drop-zone";
-import { ComposerImportPill } from "@/composer/draft/import-pill";
-import { COMPOSER_PILL_CLEARANCE } from "@/composer/pill-styles";
+import { Button } from "@/components/ui/button";
+import { OptimizeLogo } from "@/components/icons/optimize-logo";
 import { AgentStreamView } from "@/agent-stream/view";
 import { composerWorkspaceAttachment } from "@/composer/attachments/workspace";
 import { useAgentInputDraft } from "@/composer/draft/input-draft";
@@ -41,11 +41,7 @@ import {
   useWorkspaceAttachmentsStore,
 } from "@/attachments/workspace-attachments-store";
 import type { UserMessageImageAttachment } from "@/types/stream";
-import {
-  COMPACT_FORM_FACTOR_WIDTH,
-  MAX_CONTENT_WIDTH,
-  useIsCompactFormFactor,
-} from "@/constants/layout";
+import { COMPACT_FORM_FACTOR_WIDTH, useIsCompactFormFactor } from "@/constants/layout";
 import { isWeb } from "@/constants/platform";
 import {
   buildWorkspaceTabPersistenceKey,
@@ -53,6 +49,35 @@ import {
 } from "@/workspace-tabs/model";
 import { openWorkspaceChanges } from "@/workspace-tabs/open-supporting-view";
 import { useSettings } from "@/hooks/use-settings";
+
+function ChatWelcome({ onChoose }: { onChoose: (text: string) => void }) {
+  const knowledge = useCallback(
+    () => onChoose("Find information in the Optimize Wiki about "),
+    [onChoose],
+  );
+  const reply = useCallback(() => onChoose("Help me draft a reply to this customer: "), [onChoose]);
+  const document = useCallback(() => onChoose("Help me work on this document: "), [onChoose]);
+  return (
+    <View style={styles.welcome}>
+      <OptimizeLogo size={52} />
+      <Text style={styles.welcomeTitle}>How can I help?</Text>
+      <Text style={styles.welcomeHint}>
+        Your company knowledge and everyday work, in one conversation.
+      </Text>
+      <View style={styles.suggestions}>
+        <Button variant="outline" size="sm" onPress={knowledge}>
+          Find company knowledge
+        </Button>
+        <Button variant="outline" size="sm" onPress={reply}>
+          Draft a customer reply
+        </Button>
+        <Button variant="outline" size="sm" onPress={document}>
+          Work on a document
+        </Button>
+      </View>
+    </View>
+  );
+}
 
 const EMPTY_PENDING_PERMISSIONS = new Map();
 const DRAFT_CAPABILITIES: AgentCapabilityFlags = {
@@ -65,6 +90,7 @@ const DRAFT_CAPABILITIES: AgentCapabilityFlags = {
 };
 
 interface AutoSubmitConfig {
+  profileId?: string;
   provider: string;
   modeId: string | null;
   model: string | null;
@@ -75,6 +101,7 @@ interface AutoSubmitConfig {
 function resolveAutoSubmitConfig(
   pending: {
     provider: string;
+    profileId?: string;
     modeId?: string | null;
     model?: string | null;
     thinkingOptionId?: string | null;
@@ -84,6 +111,7 @@ function resolveAutoSubmitConfig(
   if (!pending) return null;
   return {
     provider: pending.provider,
+    profileId: pending.profileId,
     modeId: pending.modeId ?? null,
     model: pending.model ?? null,
     thinkingOptionId: pending.thinkingOptionId ?? null,
@@ -147,6 +175,7 @@ async function submitDraftCreateRequest(input: {
   autoSubmitConfig: AutoSubmitConfig | null;
   composerState: {
     selectedProvider: string | null;
+    selectedProfileId?: string;
     selectedMode: string;
     modeOptions: readonly { id: string }[];
     effectiveModelId: string | null;
@@ -185,6 +214,7 @@ async function submitDraftCreateRequest(input: {
     selectedMode: composerState.selectedMode,
   });
   const config = buildWorkspaceDraftAgentConfig({
+    profileId: autoSubmitConfig?.profileId ?? composerState.selectedProfileId,
     provider,
     cwd,
     ...modeIdOverride,
@@ -222,6 +252,7 @@ function buildDraftAgentSnapshot(input: {
     modeOptions: readonly { id: string }[];
     selectedMode: string;
     selectedProvider: string | null;
+    selectedProfileId?: string;
     agentControls: { features?: Agent["features"] };
   };
   selectModelMessage: string;
@@ -301,16 +332,6 @@ interface WorkspaceDraftAgentTabProps {
   onOpenImportSheet?: () => void;
 }
 
-function resolveImportPillPress(
-  onOpenImportSheet: (() => void) | undefined,
-  isSubmitting: boolean,
-): (() => void) | null {
-  if (isSubmitting) {
-    return null;
-  }
-  return onOpenImportSheet ?? null;
-}
-
 export function WorkspaceDraftAgentTab({
   serverId,
   workspaceId,
@@ -320,7 +341,6 @@ export function WorkspaceDraftAgentTab({
   isPaneFocused,
   onCreated,
   onOpenWorkspaceFile,
-  onOpenImportSheet,
 }: WorkspaceDraftAgentTabProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -611,7 +631,6 @@ export function WorkspaceDraftAgentTab({
   const handleDropdownCloseFocus = useCallback(() => {
     focusInputRef.current?.();
   }, []);
-  const importPillPress = resolveImportPillPress(onOpenImportSheet, isSubmitting);
   const composerAgentControls = useMemo(
     () => ({
       ...composerState.agentControls,
@@ -639,6 +658,7 @@ export function WorkspaceDraftAgentTab({
         ) : (
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.configScrollContent}>
             <View style={styles.configSection}>
+              {draftInput.text.length === 0 && <ChatWelcome onChoose={draftInput.replaceText} />}
               {formErrorMessage ? (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{formErrorMessage}</Text>
@@ -650,13 +670,6 @@ export function WorkspaceDraftAgentTab({
       </View>
 
       <KeyboardTranslateView style={inputAreaWrapperStyle} onLayout={onInputAreaLayout}>
-        {importPillPress ? (
-          <View style={styles.importPillRow}>
-            <View style={styles.importPillContent}>
-              <ComposerImportPill onPress={importPillPress} />
-            </View>
-          </View>
-        ) : null}
         <Composer
           agentId={tabId}
           serverId={serverId}
@@ -716,24 +729,23 @@ const styles = StyleSheet.create((theme) => ({
   configSection: {
     gap: theme.spacing[3],
   },
-  importPillRow: {
-    width: "100%",
-    paddingHorizontal: theme.spacing[4],
-    paddingTop: {
-      xs: COMPOSER_PILL_CLEARANCE.compact,
-      md: COMPOSER_PILL_CLEARANCE.wide,
-    },
-    paddingBottom: {
-      xs: COMPOSER_PILL_CLEARANCE.compact,
-      md: COMPOSER_PILL_CLEARANCE.wide,
-    },
+  welcome: {
     alignItems: "center",
+    gap: theme.spacing[4],
+    paddingTop: theme.spacing[12],
+    paddingBottom: theme.spacing[8],
   },
-  importPillContent: {
-    width: "100%",
-    maxWidth: MAX_CONTENT_WIDTH,
-    flexDirection: "row",
+  welcomeTitle: {
+    fontSize: theme.fontSize["2xl"],
+    fontWeight: theme.fontWeight.medium,
+    color: theme.colors.foreground,
   },
+  welcomeHint: {
+    color: theme.colors.foregroundMuted,
+    fontSize: theme.fontSize.content,
+    textAlign: "center",
+  },
+  suggestions: { gap: theme.spacing[3], marginTop: theme.spacing[4] },
   errorContainer: {
     marginTop: theme.spacing[2],
     paddingHorizontal: theme.spacing[3],

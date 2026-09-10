@@ -100,3 +100,16 @@ test("project instructions supplement company instructions and empty prompts do 
   expect(combined).toMatch(/Project rules\.$/);
   expect(composeOptimizeInstructions({ company: "" })).toBe("");
 });
+
+test("layers profile instructions below company and project rules and keeps memory separate", () => {
+  const prompt = composeOptimizeInstructions({
+    company: "Company rule",
+    project: "Project rule",
+    profile: "Support assistant rule",
+    memory: "Saved memory: factual context",
+  });
+  expect(prompt.indexOf("Company rule")).toBeLessThan(prompt.indexOf("Project rule"));
+  expect(prompt.indexOf("Project rule")).toBeLessThan(prompt.indexOf("Support assistant rule"));
+  expect(prompt.indexOf("Support assistant rule")).toBeLessThan(prompt.indexOf("Saved memory"));
+  expect(prompt).toContain("subject to company and project instructions");
+});

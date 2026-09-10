@@ -11,6 +11,8 @@ type WikiRequest = Extract<
   SessionInboundMessage,
   {
     type:
+      | "wiki.trash.request"
+      | "wiki.archive.request"
       | "wiki.history.request"
       | "wiki.revision.request"
       | "wiki.index.request"
@@ -21,6 +23,8 @@ type WikiRequest = Extract<
 >;
 
 const responseTypes = {
+  "wiki.trash.request": "wiki.trash.response",
+  "wiki.archive.request": "wiki.archive.response",
   "wiki.history.request": "wiki.history.response",
   "wiki.revision.request": "wiki.revision.response",
   "wiki.index.request": "wiki.index.response",
@@ -39,6 +43,18 @@ export class OptimizeWikiSession {
     const requestId = message.requestId;
     try {
       switch (message.type) {
+        case "wiki.trash.request":
+          this.options.emit({
+            type: "wiki.trash.response",
+            payload: { requestId, ok: true, ...(await this.store.trash(message)) },
+          });
+          return;
+        case "wiki.archive.request":
+          this.options.emit({
+            type: "wiki.archive.response",
+            payload: { requestId, ok: true, page: await this.store.archive(message) },
+          });
+          return;
         case "wiki.history.request":
           this.options.emit({
             type: "wiki.history.response",

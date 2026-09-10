@@ -1,3 +1,4 @@
+import { MemoryPage } from "./memory-page";
 import { ChoiceButton } from "@/components/ui/choice-button";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
@@ -10,10 +11,27 @@ import { AgentSkillsSection } from "@/agent-skills";
 import { AppendSystemPromptCard, InjectPaseoToolsCard, HostProvidersPage } from "./host-page";
 import { BrowserToolsOptInCard } from "./browser-tools-card";
 import { HostPluginsPage } from "./plugins-page";
-import { buildProjectsSettingsRoute, buildSettingsHostSectionRoute } from "@/utils/host-routes";
+import {
+  buildProjectsSettingsRoute,
+  buildSettingsHostSectionRoute,
+  buildSettingsAddHostRoute,
+} from "@/utils/host-routes";
 
-const sections = ["Prompts", "Context", "Agents", "Models", "Extensions", "Integrations"] as const;
+const sections = [
+  "Prompts",
+  "Context",
+  "Agents",
+  "Models",
+  "Extensions",
+  "Integrations",
+  "Memory",
+  "Administration",
+] as const;
 type EngineeringSection = (typeof sections)[number];
+const sectionLabels: Partial<Record<EngineeringSection, string>> = {
+  Prompts: "System prompts",
+  Agents: "Assistants",
+};
 export function EngineeringPage({
   serverId,
   initialSection = "Prompts",
@@ -29,6 +47,19 @@ export function EngineeringPage({
   const openWiki = useCallback(() => router.push("/wiki"), []);
   const openConnections = useCallback(
     () => router.push(buildSettingsHostSectionRoute(serverId, "connections")),
+    [serverId],
+  );
+  const connectHost = useCallback(() => router.push(buildSettingsAddHostRoute(Date.now())), []);
+  const openHost = useCallback(
+    () => router.push(buildSettingsHostSectionRoute(serverId, "host")),
+    [serverId],
+  );
+  const openPairing = useCallback(
+    () => router.push(buildSettingsHostSectionRoute(serverId, "pair-device")),
+    [serverId],
+  );
+  const openUsage = useCallback(
+    () => router.push(buildSettingsHostSectionRoute(serverId, "usage")),
     [serverId],
   );
   return (
@@ -47,13 +78,14 @@ export function EngineeringPage({
             onSelect={setSection}
             testID={`engineering-tab-${entry.toLowerCase()}`}
           >
-            {entry}
+            {sectionLabels[entry] ?? entry}
           </ChoiceButton>
         ))}
       </View>
       {section === "Prompts" && (
         <SettingsSection title="System instructions">
           <AppendSystemPromptCard serverId={serverId} />
+          <AgentProfilesSection serverId={serverId} />
           <View style={styles.card}>
             <Text style={styles.heading}>Project instructions</Text>
             <Text style={styles.description}>
@@ -67,9 +99,10 @@ export function EngineeringPage({
           <View style={styles.card}>
             <Text style={styles.heading}>How context is assembled</Text>
             <Text style={styles.description}>
-              Company instructions → Wiki access guidance → project instructions → conversation and
-              relevant sources. Wiki articles supply knowledge; they do not override system
-              instructions.
+              Company instructions → project instructions → assistant system prompt → conversation
+              and relevant sources. Saved memory and Wiki pages are context, not instructions.
+              Changes to prompts and memory apply on the next message. Wiki articles supply
+              knowledge; they do not override system instructions.
             </Text>
           </View>
         </SettingsSection>
@@ -108,8 +141,32 @@ export function EngineeringPage({
           <AgentSkillsSection serverId={serverId} />
         </SettingsSection>
       )}
+      {section === "Memory" && <MemoryPage serverId={serverId} />}
       {section === "Models" && <HostProvidersPage serverId={serverId} />}
       {section === "Extensions" && <HostPluginsPage serverId={serverId} />}
+      {section === "Administration" && (
+        <SettingsSection title="Host administration">
+          <Button onPress={connectHost}>Connect company host</Button>
+          <Text style={styles.description}>
+            Technical setup for the person responsible for Optimize. These controls configure this
+            host; they are not employee roles or access enforcement.
+          </Text>
+          <View style={styles.tabs}>
+            <Button variant="outline" onPress={openHost}>
+              Host status
+            </Button>
+            <Button variant="outline" onPress={openConnections}>
+              Connections
+            </Button>
+            <Button variant="outline" onPress={openPairing}>
+              Pair a device
+            </Button>
+            <Button variant="outline" onPress={openUsage}>
+              Usage
+            </Button>
+          </View>
+        </SettingsSection>
+      )}
       {section === "Integrations" && (
         <SettingsSection title="Company tools">
           <View style={styles.card}>

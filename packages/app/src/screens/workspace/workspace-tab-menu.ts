@@ -172,11 +172,6 @@ export function buildWorkspaceTabMenuEntries(
     index,
     tabCount,
     menuTestIDBase,
-    onCopyResumeCommand,
-    onCopyAgentId,
-    onCopyTerminalId,
-    onCopyFilePath,
-    onReloadAgent,
     onRenameTab,
     onCloseTab,
     onCloseTabsBefore,
@@ -188,60 +183,6 @@ export function buildWorkspaceTabMenuEntries(
   const isLastTab = index === tabCount - 1;
   const isOnlyTab = tabCount <= 1;
   const entries: WorkspaceTabMenuEntry[] = [];
-
-  if (tab.target.kind === "agent") {
-    const { agentId } = tab.target;
-    entries.push({
-      kind: "item",
-      key: "copy-resume-command",
-      label: labels.copyResumeCommand,
-      icon: "copy",
-      testID: `${menuTestIDBase}-copy-resume-command`,
-      onSelect: () => {
-        void onCopyResumeCommand(agentId);
-      },
-    });
-    entries.push({
-      kind: "item",
-      key: "copy-agent-id",
-      label: labels.copyAgentId,
-      icon: "copy",
-      hint: agentId.slice(0, 7),
-      testID: `${menuTestIDBase}-copy-agent-id`,
-      onSelect: () => {
-        void onCopyAgentId(agentId);
-      },
-    });
-  }
-
-  if (tab.target.kind === "terminal") {
-    const { terminalId } = tab.target;
-    entries.push({
-      kind: "item",
-      key: "copy-terminal-id",
-      label: labels.copyTerminalId,
-      icon: "copy",
-      hint: terminalId.slice(0, 7),
-      testID: `${menuTestIDBase}-copy-terminal-id`,
-      onSelect: () => {
-        void onCopyTerminalId(terminalId);
-      },
-    });
-  }
-
-  if (tab.target.kind === "file") {
-    const filePath = tab.target.path;
-    entries.push({
-      kind: "item",
-      key: "copy-file-path",
-      label: labels.copyFilePath,
-      icon: "copy",
-      testID: `${menuTestIDBase}-copy-file-path`,
-      onSelect: () => {
-        void onCopyFilePath(filePath);
-      },
-    });
-  }
 
   if (tab.target.kind === "agent" || tab.target.kind === "terminal") {
     entries.push({
@@ -293,20 +234,6 @@ export function buildWorkspaceTabMenuEntries(
       void onCloseOtherTabs(tab.tabId);
     },
   });
-  if (tab.target.kind === "agent") {
-    const { agentId } = tab.target;
-    entries.push({
-      kind: "item",
-      key: "reload-agent",
-      label: labels.reloadAgent,
-      icon: "rotate-cw",
-      tooltip: labels.reloadAgentTooltip,
-      testID: `${menuTestIDBase}-reload-agent`,
-      onSelect: () => {
-        void onReloadAgent(agentId);
-      },
-    });
-  }
   entries.push({
     kind: "item",
     key: "close",

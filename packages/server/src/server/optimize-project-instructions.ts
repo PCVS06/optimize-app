@@ -35,14 +35,28 @@ export async function readOptimizeProjectInstructions({
 interface InstructionLayers {
   company: string;
   project?: string;
+  profile?: string;
+  memory?: string;
 }
 
-export function composeOptimizeInstructions({ company, project }: InstructionLayers): string {
-  const companyPrompt = company.trim();
-  const projectPrompt = project?.trim();
-  if (!projectPrompt) return companyPrompt;
-  const projectSection =
-    "Project instructions\nApply these to this project, subject to the company-wide instructions above.\n" +
-    projectPrompt;
-  return [companyPrompt, projectSection].filter(Boolean).join("\n\n");
+export function composeOptimizeInstructions({
+  company,
+  project,
+  profile,
+  memory,
+}: InstructionLayers): string {
+  return [
+    company.trim(),
+    project?.trim()
+      ? "Project instructions\nApply these to this project, subject to the company-wide instructions above.\n" +
+        project.trim()
+      : undefined,
+    profile?.trim()
+      ? "Assistant system prompt\nApply this role subject to company and project instructions above.\n" +
+        profile.trim()
+      : undefined,
+    memory,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

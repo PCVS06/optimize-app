@@ -8,6 +8,7 @@ import type { AgentConfigApply, AgentProfile } from "@getpaseo/protocol/messages
  */
 export interface MaterializedAgentProfile {
   provider: string;
+  profileId: string;
   /** Empty when the profile names no model, meaning "leave the model alone". */
   modelId: string;
   modeId: string;
@@ -22,6 +23,7 @@ function trimmed(value: string | undefined): string {
 export function materializeAgentProfile(profile: AgentProfile): MaterializedAgentProfile {
   return {
     provider: trimmed(profile.provider),
+    profileId: profile.id,
     modelId: trimmed(profile.model),
     modeId: trimmed(profile.modeId),
     thinkingOptionId: trimmed(profile.thinkingOptionId),
@@ -49,6 +51,7 @@ export function reconcileMaterializedProfileMode(
  */
 export function toAgentConfigApply(profile: MaterializedAgentProfile): AgentConfigApply {
   return {
+    profileId: profile.profileId || null,
     ...(profile.modelId ? { modelId: profile.modelId } : {}),
     ...(profile.modeId ? { modeId: profile.modeId } : {}),
     ...(profile.thinkingOptionId ? { thinkingOptionId: profile.thinkingOptionId } : {}),

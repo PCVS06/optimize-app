@@ -146,6 +146,29 @@ describe("openAgentProfileForm", () => {
     expect(model.getState().submitValue).toMatchObject({ name: "UI work", provider: "claude" });
   });
 
+  it("keeps assistant instructions distinct from selection notes and lets them be cleared", () => {
+    const model = openAgentProfileForm({
+      mode: "edit",
+      profile: {
+        id: "support",
+        name: "Support",
+        provider: "pi",
+        notes: "Choose for customer enquiries",
+        systemPrompt: "Check company knowledge before answering",
+      },
+    });
+    expect(model.getState().submitValue?.systemPrompt).toBe(
+      "Check company knowledge before answering",
+    );
+    model.setNotes("Choose for returns");
+    expect(model.getState().submitValue?.systemPrompt).toBe(
+      "Check company knowledge before answering",
+    );
+    model.setSystemPrompt("");
+    expect(model.getState().submitValue).not.toHaveProperty("systemPrompt");
+    expect(model.getState().submitValue?.notes).toBe("Choose for returns");
+  });
+
   it("omits blank text fields from the submitted value but never a selection", () => {
     const model = openWithCatalog({ mode: "create" });
     model.setName("  Cheap grunt  ");
