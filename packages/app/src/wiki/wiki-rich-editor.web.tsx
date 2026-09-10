@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
 import {
@@ -411,7 +411,12 @@ function RichDocument({
       <div ref={surface} className="wiki-editor-surface" onKeyDownCapture={onKey}>
         <ThemedEditorContent uniProps={editorColors} editor={editor} />
         {current.slash !== null && commands.length > 0 && !slashDismissed && (
-          <View style={[styles.commands, anchor]} testID="wiki-slash-menu">
+          <ScrollView
+            style={[styles.commands, anchor]}
+            contentContainerStyle={styles.commandContent}
+            testID="wiki-slash-menu"
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.muted}>INSERT A BLOCK</Text>
             {commands.map((command, index) => (
               <ChoiceButton
@@ -424,7 +429,7 @@ function RichDocument({
                 {command.label}
               </ChoiceButton>
             ))}
-          </View>
+          </ScrollView>
         )}
       </div>
     </View>
@@ -454,14 +459,13 @@ const styles = StyleSheet.create((theme) => ({
     width: 300,
     maxWidth: "100%",
     maxHeight: 360,
-    overflow: "scroll",
-    padding: 12,
-    gap: 4,
+
     backgroundColor: theme.colors.surface1,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 12,
   },
+  commandContent: { padding: 12, gap: 4 },
   muted: { color: theme.colors.foregroundMuted, fontSize: 11, letterSpacing: 1 },
   error: { color: theme.colors.destructive, fontSize: 12 },
 }));
