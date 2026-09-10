@@ -846,9 +846,13 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     .getByTestId("wiki-article-body")
     .getByText("Updated company guidance. WIKI_CONTEXT_UPDATED_719.")
     .waitFor();
+  await page.getByTestId("wiki-search").fill("NO_MATCHING_WIKI_PAGE_820");
+  await page.getByText("No matching pages. Try different words.").waitFor();
   await page.getByTestId("wiki-search").fill("WIKI_CONTEXT_UPDATED_719");
   await page.getByTestId(`wiki-page-${savedWiki.id}`).waitFor();
   await page.reload();
+  // Desktop renderer reload returns to its startup route. Reopen the Wiki as a user does.
+  await page.getByTestId("sidebar-optimize-wiki").click();
   await page.getByTestId(`wiki-page-${savedWiki.id}`).click();
   await page
     .getByTestId("wiki-article-body")

@@ -136,7 +136,7 @@ export class OptimizeWikiStore {
     if ((previous?.revision ?? null) !== expectedRevision) {
       throw new WikiError(
         "conflict",
-        "Someone changed this page. Your draft is kept. Cancel and reopen the page to compare before saving again.",
+        "Someone changed this page. Your draft is kept here. Copy it before cancelling and reopening the page to compare the latest version.",
       );
     }
     const now = new Date().toISOString();

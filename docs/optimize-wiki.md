@@ -8,7 +8,7 @@ The Wiki belongs to the connected Optimize host and is available across that hos
 
 Pages are UTF-8 JSON files under the Optimize data directory, normally `~/.optimize/wiki/<page-id>.json`. Each file contains the title, Markdown body, ID, revision, and creation/update timestamps. This directory is runtime company data, outside the source repository. Include it in the host's backup policy; updating the app does not replace it.
 
-Writes are atomic and serialized per host directory. An edit must carry the revision it opened. Conflicting edits return an error and keep the draft in the editor; cancel and reopen the page to compare the latest version. Previous revisions are retained under `wiki/history/<page-id>/` for administrator recovery. There is currently no in-app history browser, deletion, automatic import, or document attachment indexing.
+Writes are atomic and serialized per host directory. An edit must carry the revision it opened. Conflicting edits return an error and keep the draft in the editor; copy the draft before cancelling and reopening the page to compare the latest version. Previous revisions are retained under `wiki/history/<page-id>/` for administrator recovery. There is currently no in-app history browser, deletion, automatic import, or document attachment indexing.
 
 Titles support 160 characters and bodies 100,000 characters. Search matches all supplied words across titles and bodies, ranks title matches first, and paginates 50 results at a time. Read errors are surfaced instead of being reported as an empty Wiki. Page IDs cannot escape the Wiki directory, and symbolic-link page reads are refused.
 
