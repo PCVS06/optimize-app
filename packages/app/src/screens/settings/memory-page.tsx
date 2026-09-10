@@ -215,10 +215,9 @@ function MemoryWorkspace({ serverId, online }: { serverId: string; online: boole
       />
       <Text style={styles.description}>
         {projectId
-          ? "These memories are used only in this project. Company memories also apply."
-          : "These memories apply to every conversation on this Optimize host and are visible to people with access to it. Save personal or project-only details in the appropriate project."}{" "}
-        Changes apply from the next message. Chat history is kept separately; the assistant does not
-        automatically share private emails or conversations as company memory.
+          ? "Used only in this project's chats. Company memories also apply."
+          : "Used in all chats and visible to people with access to this company setup."}{" "}
+        Changes take effect from your next message. Chat history is kept separately.
       </Text>
       {!online && <Text style={styles.error}>Offline. Connect to load or save memory.</Text>}
       {editing !== null ? (

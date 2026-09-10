@@ -11,12 +11,12 @@ export const zhCN: TranslationResources = {
     extensions: "Extensions",
     projectInstructions: "Project instructions",
     projectInstructionsHint:
-      "Added to the company instructions for this project. Changes apply to new or reloaded conversations.",
+      "Added to the company instructions for this project. Changes take effect from the next message.",
     projectInstructionsPlaceholder:
       "Describe this project, its sources, preferred language, and how the assistant should work.",
     companyInstructions: "Company instructions",
     companyInstructionsHint:
-      "Shared across projects on this Mac. Changes apply to new or reloaded conversations.",
+      "Applies across projects and conversations. Changes take effect from the next message.",
     companyInstructionsPlaceholder:
       "Set the company-wide role, tone, sources, and working rules for the Optimize assistant.",
     promptSaveFailed: "Instructions could not be saved. Please try again.",
