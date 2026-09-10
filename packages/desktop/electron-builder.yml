@@ -49,11 +49,6 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist
   extraResources:
-    - from: pi-runtime
-      to: pi-runtime
-      filter:
-        - package.json
-        - node_modules/**/*
     - from: bin/pi
       to: bin/pi
     - from: bin/node

@@ -109,10 +109,39 @@ function fmtMB(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function copyEmbeddedPi(appOutDir) {
+  const source = path.resolve(__dirname, "../pi-runtime");
+  const entrypoint = "node_modules/@earendil-works/pi-coding-agent/dist/cli.js";
+  if (!fs.existsSync(path.join(source, entrypoint))) {
+    throw new Error("Install packages/desktop/pi-runtime before packaging Optimize.");
+  }
+  const destination = path.join(
+    appOutDir,
+    `${EXECUTABLE_NAME}.app`,
+    "Contents",
+    "Resources",
+    "pi-runtime",
+  );
+  // Keep Pi's independent dependency tree intact. electron-builder's resource
+  // matcher excludes node_modules; this copy runs before signing the app.
+  fs.mkdirSync(destination, { recursive: true });
+  fs.copyFileSync(path.join(source, "package.json"), path.join(destination, "package.json"));
+  fs.cpSync(path.join(source, "node_modules"), path.join(destination, "node_modules"), {
+    recursive: true,
+    verbatimSymlinks: true,
+  });
+  if (!fs.existsSync(path.join(destination, entrypoint))) {
+    throw new Error("Embedded Pi was not copied into the packaged app.");
+  }
+}
+
 exports.default = async function afterPack(context) {
   const platform = context.electronPlatformName;
   const arch = ARCH_MAP[context.arch] || process.arch;
 
+  if (platform === "darwin") {
+    copyEmbeddedPi(context.appOutDir);
+  }
   pruneNativeModules(context.appOutDir, platform, arch);
 
   if (platform === "linux" || platform === "win32") {
