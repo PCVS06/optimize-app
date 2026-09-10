@@ -55,6 +55,7 @@ export function WikiGraph({
           value={search}
           onChangeText={setSearch}
           placeholder="Find an article and its neighbors…"
+          clearAccessibilityLabel="Clear graph search"
         />
         <Button size="sm" variant="ghost" onPress={zoomOut}>
           −
