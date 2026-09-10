@@ -117,17 +117,17 @@ export const en = {
   },
   composer: {
     placeholders: {
-      desktop: "Message the agent, tag @files, or use /commands and /skills",
-      mobile: "Message, @files, /commands",
-      fallback: "Message...",
+      desktop: "Ask Optimize, attach a document, or describe what you need…",
+      mobile: "Ask Optimize…",
+      fallback: "Ask Optimize…",
       terminal: "Prompt",
     },
     input: {
-      accessibilityLabel: "Message agent...",
+      accessibilityLabel: "Message Optimize",
       terminalAccessibilityLabel: "Terminal prompt",
       focusHint: "{{shortcut}} to focus",
       addAttachment: "Add attachment",
-      interruptAgent: "Interrupt agent",
+      interruptAgent: "Stop response",
       queueMessage: "Queue message",
       sendAndInterrupt: "Send and interrupt",
       sendAndSteer: "Send and steer",
