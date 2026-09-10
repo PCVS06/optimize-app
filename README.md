@@ -25,3 +25,7 @@ The desktop updater reads this repository’s GitHub releases. [Release instruct
 Optimize is a customized derivative of [Paseo v0.8.0](https://github.com/getpaseo/paseo/tree/v0.8.0), with [Pi](https://github.com/badlogic/pi-mono) as its assistant runtime. The original Apache-2.0 [LICENSE](LICENSE), upstream authorship, and third-party notices remain applicable. Pi uses the MIT license. Optimize branding does not imply ownership of the underlying open-source components.
 
 A full dependency license review and distribution-notice audit are still required before a commercial customer release.
+
+## Company Wiki
+
+Open **Optimize Wiki** at the bottom of the sidebar to build the shared knowledge base for staff and the assistant. Pages stay in the connected host’s Optimize data directory, separate from this repository. See [Wiki storage, assistant access, and scope](docs/optimize-wiki.md).

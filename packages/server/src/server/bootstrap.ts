@@ -1,3 +1,4 @@
+import { appendOptimizeWikiInstructions } from "./optimize-wiki.js";
 import { readOptimizeProjectInstructions } from "./optimize-project-instructions.js";
 import { describeHookWorkspace } from "./plugins/lifecycle/index.js";
 import express from "express";
@@ -925,7 +926,10 @@ export async function createPaseoDaemon(
     clients: initialAgentManagerState.clients,
     providerDefinitions: initialAgentManagerState.providerDefinitions,
     registry: agentStorage,
-    appendSystemPrompt: config.appendSystemPrompt,
+    appendSystemPrompt: appendOptimizeWikiInstructions({
+      company: config.appendSystemPrompt,
+      paseoHome: config.paseoHome,
+    }),
     resolveProjectSystemPrompt: async (workspaceId) => {
       if (!workspaceRegistry) return undefined;
       return readOptimizeProjectInstructions({
@@ -1626,7 +1630,12 @@ export async function createPaseoDaemon(
               setAgentProviderToolsEnabled(mcpEnabled && value !== false);
             });
             daemonConfigStore.onFieldChange("appendSystemPrompt", (value) => {
-              agentManager.setAppendSystemPrompt(typeof value === "string" ? value : "");
+              agentManager.setAppendSystemPrompt(
+                appendOptimizeWikiInstructions({
+                  company: typeof value === "string" ? value : "",
+                  paseoHome: config.paseoHome,
+                }),
+              );
             });
             const relayEnabled = config.relayEnabled ?? true;
             const relayEndpoint = config.relayEndpoint ?? "relay.paseo.sh:443";

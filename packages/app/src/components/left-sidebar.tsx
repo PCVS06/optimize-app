@@ -1,5 +1,6 @@
-import { router } from "expo-router";
-import { FolderPlus, GitBranch, Import, Server, Settings, X } from "lucide-react-native";
+import { SidebarHeaderRow } from "@/components/sidebar/sidebar-header-row";
+import { router, usePathname } from "expo-router";
+import { BookOpen, FolderPlus, GitBranch, Import, Server, Settings, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
@@ -465,46 +466,61 @@ function SidebarFooter({
   handleOpenHostSettings: (serverId: string) => void;
 }) {
   const isCompact = useIsCompactFormFactor();
+  const pathname = usePathname();
+  const openWiki = useCallback(() => {
+    if (isCompact) usePanelStore.getState().closeAgentListForLayout({ isCompact: true });
+    router.navigate("/wiki");
+  }, [isCompact]);
   const newAgentKeys = useShortcutKeys("new-agent");
   const settingsKeys = useShortcutKeys("toggle-settings");
 
   return (
-    <View style={styles.sidebarFooter}>
-      <FooterAddProjectButton
-        onPress={handleOpenProject}
-        label={labels.addProject}
-        shortcutKeys={newAgentKeys}
-        theme={theme}
+    <>
+      <SidebarHeaderRow
+        icon={BookOpen}
+        label="Optimize Wiki"
+        onPress={openWiki}
+        isActive={pathname === "/wiki"}
+        variant="compact"
+        testID="sidebar-optimize-wiki"
       />
-      <View style={styles.footerIconRow}>
-        {isCompact ? (
-          <>
-            <SidebarHostPicker
-              theme={theme}
-              label={labels.hosts}
-              onAddHost={handleAddHost}
-              onOpenHostSettings={handleOpenHostSettings}
-            />
-            <FooterIconButton
-              onPress={handleImportSession}
-              testID="sidebar-import-session"
-              label={labels.importSession}
-              icon={Import}
-              theme={theme}
-            />
-          </>
-        ) : null}
-        <SidebarHelpMenu />
-        <FooterIconButton
-          onPress={handleSettings}
-          testID="sidebar-settings"
-          label={labels.settings}
-          icon={Settings}
-          shortcutKeys={settingsKeys}
+      <View style={styles.sidebarFooter}>
+        <FooterAddProjectButton
+          onPress={handleOpenProject}
+          label={labels.addProject}
+          shortcutKeys={newAgentKeys}
           theme={theme}
         />
+        <View style={styles.footerIconRow}>
+          {isCompact ? (
+            <>
+              <SidebarHostPicker
+                theme={theme}
+                label={labels.hosts}
+                onAddHost={handleAddHost}
+                onOpenHostSettings={handleOpenHostSettings}
+              />
+              <FooterIconButton
+                onPress={handleImportSession}
+                testID="sidebar-import-session"
+                label={labels.importSession}
+                icon={Import}
+                theme={theme}
+              />
+            </>
+          ) : null}
+          <SidebarHelpMenu />
+          <FooterIconButton
+            onPress={handleSettings}
+            testID="sidebar-settings"
+            label={labels.settings}
+            icon={Settings}
+            shortcutKeys={settingsKeys}
+            theme={theme}
+          />
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 

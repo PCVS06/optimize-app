@@ -819,6 +819,45 @@ function assertLinuxDesktopIdentity(appPath) {
   }
 }
 
+async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
+  // Optimize Wiki: real sidebar navigation, editing, persistence, body search, and reload.
+  await page.getByTestId("sidebar-optimize-wiki").click();
+  await page.getByTestId("wiki-new-page").click();
+  await page.getByTestId("wiki-title-input").fill("Product care guide");
+  await page
+    .getByTestId("wiki-body-input")
+    .fill("## Care\nUse the approved service guide. WIKI_CONTEXT_718.");
+  await page.getByTestId("wiki-save").click();
+  await page.getByTestId("wiki-article-title").waitFor();
+  const wikiFiles = fs
+    .readdirSync(path.join(daemonHome, "wiki"))
+    .filter((file) => file.endsWith(".json"));
+  if (wikiFiles.length !== 1) throw new Error("Wiki page did not persist in daemon storage");
+  const wikiFile = path.join(daemonHome, "wiki", wikiFiles[0]);
+  const savedWiki = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
+  if (savedWiki.title !== "Product care guide" || !savedWiki.body.includes("WIKI_CONTEXT_718"))
+    throw new Error("Saved Wiki content does not match the editor");
+  await page.getByTestId("wiki-edit-page").click();
+  await page
+    .getByTestId("wiki-body-input")
+    .fill("## Care\nUpdated company guidance. WIKI_CONTEXT_UPDATED_719.");
+  await page.getByTestId("wiki-save").click();
+  await page
+    .getByTestId("wiki-article-body")
+    .getByText("Updated company guidance. WIKI_CONTEXT_UPDATED_719.")
+    .waitFor();
+  await page.getByTestId("wiki-search").fill("WIKI_CONTEXT_UPDATED_719");
+  await page.getByTestId(`wiki-page-${savedWiki.id}`).waitFor();
+  await page.reload();
+  await page.getByTestId(`wiki-page-${savedWiki.id}`).click();
+  await page
+    .getByTestId("wiki-article-body")
+    .getByText("Updated company guidance. WIKI_CONTEXT_UPDATED_719.")
+    .waitFor();
+  if (artifactDir)
+    await page.screenshot({ path: path.join(artifactDir, "optimize-wiki.png"), fullPage: true });
+}
+
 async function smokePackagedDesktopApp({ appPath }) {
   const executablePath = getExecutablePath(appPath);
   assertExecutable(executablePath, "Packaged app executable");
@@ -922,6 +961,8 @@ async function smokePackagedDesktopApp({ appPath }) {
         JSON.stringify(providers, null, 2),
       );
     }
+    await verifyOptimizeWiki({ page, daemonHome, artifactDir });
+
     // Optimize: exercise the actual settings UI against the isolated packaged daemon.
     await page.getByTestId("sidebar-settings").click();
     await page.getByTestId("settings-host-section-agents").waitFor({ timeout: 30000 });

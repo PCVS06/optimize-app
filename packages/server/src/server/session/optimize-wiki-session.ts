@@ -1,0 +1,72 @@
+import type { Logger } from "pino";
+import type { SessionInboundMessage, SessionOutboundMessage } from "../messages.js";
+import { getOptimizeWikiStore, WikiError, type OptimizeWikiStore } from "../optimize-wiki.js";
+
+interface WikiSessionOptions {
+  paseoHome: string;
+  emit: (message: SessionOutboundMessage) => void;
+  logger: Logger;
+}
+type WikiRequest = Extract<
+  SessionInboundMessage,
+  { type: "wiki.search.request" | "wiki.read.request" | "wiki.write.request" }
+>;
+
+const responseTypes = {
+  "wiki.search.request": "wiki.search.response",
+  "wiki.read.request": "wiki.read.response",
+  "wiki.write.request": "wiki.write.response",
+} as const;
+
+export class OptimizeWikiSession {
+  private readonly store: OptimizeWikiStore;
+  constructor(private readonly options: WikiSessionOptions) {
+    this.store = getOptimizeWikiStore(options.paseoHome);
+  }
+
+  async handle(message: WikiRequest): Promise<void> {
+    const requestId = message.requestId;
+    try {
+      switch (message.type) {
+        case "wiki.search.request":
+          this.options.emit({
+            type: "wiki.search.response",
+            payload: { requestId, ok: true, ...(await this.store.search(message)) },
+          });
+          return;
+        case "wiki.read.request":
+          this.options.emit({
+            type: "wiki.read.response",
+            payload: { requestId, ok: true, page: await this.store.read(message.id) },
+          });
+          return;
+        case "wiki.write.request":
+          this.options.emit({
+            type: "wiki.write.response",
+            payload: { requestId, ok: true, page: await this.store.write(message) },
+          });
+          return;
+      }
+    } catch (error) {
+      this.options.logger.warn(
+        { err: error, operation: message.type },
+        "Optimize Wiki request failed",
+      );
+      this.options.emit({
+        type: responseTypes[message.type],
+        payload: {
+          requestId,
+          ok: false,
+          error:
+            error instanceof WikiError
+              ? { code: error.code, message: error.message }
+              : {
+                  code: "unavailable",
+                  message:
+                    "The Wiki could not be saved or loaded. Your draft is kept. Check the connection and try again.",
+                },
+        },
+      });
+    }
+  }
+}

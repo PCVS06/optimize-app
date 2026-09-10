@@ -1,3 +1,11 @@
+import {
+  WikiSearchRequestSchema,
+  WikiReadRequestSchema,
+  WikiWriteRequestSchema,
+  WikiSearchResponseSchema,
+  WikiReadResponseSchema,
+  WikiWriteResponseSchema,
+} from "./optimize-wiki.js";
 import { z } from "zod";
 import { TerminalActivitySchema } from "./terminal-activity.js";
 import { CLIENT_CAPS } from "./client-capabilities.js";
@@ -3128,6 +3136,9 @@ export const SessionInboundMessageSchema = z.discriminatedUnion("type", [
   AgentSkillsImportLegacySelectionRequestSchema,
   GetDaemonConfigRequestMessageSchema,
   SetDaemonConfigRequestMessageSchema,
+  WikiSearchRequestSchema,
+  WikiReadRequestSchema,
+  WikiWriteRequestSchema,
   ReadProjectConfigRequestMessageSchema,
   WriteProjectConfigRequestMessageSchema,
   DictationStreamStartMessageSchema,
@@ -3526,6 +3537,7 @@ export const ServerInfoStatusPayloadSchema = z
         daemonDiagnostics: z.boolean().optional(),
         // COMPAT(daemonSelfUpdate): added in v0.1.93, remove gate after 2026-12-13.
         daemonSelfUpdate: z.boolean().optional(),
+        optimizeWiki: z.boolean().optional(),
         // COMPAT(agentForkContext): added in v0.1.102, remove gate after 2026-12-28.
         agentForkContext: z.boolean().optional(),
         // COMPAT(agentForkContextCursor): added in v0.1.108, remove gate after 2027-01-14.
@@ -6559,6 +6571,9 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion("type", [
   DiagnosticsResponseSchema,
   GetDaemonConfigResponseMessageSchema,
   SetDaemonConfigResponseMessageSchema,
+  WikiSearchResponseSchema,
+  WikiReadResponseSchema,
+  WikiWriteResponseSchema,
   ReadProjectConfigResponseMessageSchema,
   WriteProjectConfigResponseMessageSchema,
   SetAgentModeResponseMessageSchema,

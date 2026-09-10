@@ -1,3 +1,4 @@
+import { OptimizeWikiSession } from "./session/optimize-wiki-session.js";
 import type { SessionEventSubscription } from "@getpaseo/protocol/messages";
 import type { AgentRequests } from "./agent/requests/index.js";
 import equal from "fast-deep-equal";
@@ -751,6 +752,7 @@ export class Session {
   private readonly workspaceFilesSession: WorkspaceFilesSession;
   private readonly agentConfigSession: AgentConfigSession;
   private readonly projectConfigSession: ProjectConfigSession;
+  private readonly optimizeWikiSession: OptimizeWikiSession;
   private readonly daemonSession: DaemonSession;
   private readonly hubExecutionController: HubExecutionController | null;
   private readonly workspaceScripts: WorkspaceScriptsService;
@@ -959,6 +961,11 @@ export class Session {
         setThinking: (agentId, thinkingOptionId) =>
           agentManager.setAgentThinkingOption(agentId, thinkingOptionId),
       },
+      logger: this.sessionLogger,
+    });
+    this.optimizeWikiSession = new OptimizeWikiSession({
+      paseoHome: this.paseoHome,
+      emit: (msg) => this.emit(msg),
       logger: this.sessionLogger,
     });
     this.projectConfigSession = new ProjectConfigSession({
@@ -2003,6 +2010,7 @@ export class Session {
       this.dispatchAgentTimelineMessage(msg, source) ??
       this.dispatchHubExecutionMessage(msg) ??
       this.dispatchAgentLifecycleMessage(msg) ??
+      this.dispatchWikiMessage(msg) ??
       this.dispatchAgentConfigMessage(msg) ??
       this.dispatchCheckoutMessage(msg) ??
       this.dispatchWorkspaceLifecycleMessage(msg) ??
@@ -2425,6 +2433,17 @@ export class Session {
         return this.handleAgentPermissionResponse(msg.agentId, msg.requestId, msg.response);
       case "clear_agent_attention":
         return this.handleClearAgentAttention(msg.agentId, msg.requestId);
+      default:
+        return undefined;
+    }
+  }
+
+  private dispatchWikiMessage(msg: SessionInboundMessage): Promise<void> | undefined {
+    switch (msg.type) {
+      case "wiki.search.request":
+      case "wiki.read.request":
+      case "wiki.write.request":
+        return this.optimizeWikiSession.handle(msg);
       default:
         return undefined;
     }

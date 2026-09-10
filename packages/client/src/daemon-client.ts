@@ -1,3 +1,4 @@
+import type { WikiSearchInput, WikiWriteInput } from "@getpaseo/protocol/optimize-wiki";
 import { ProviderSnapshotUpdates } from "./provider-snapshots/index.js";
 import type { SessionEventSubscription } from "@getpaseo/protocol/messages";
 import {
@@ -4923,6 +4924,27 @@ export class DaemonClient {
 
   sendBrowserAutomationExecuteResponse(response: BrowserAutomationExecuteResponse): void {
     this.sendSessionMessageStrict(response);
+  }
+
+  async searchWiki(input: WikiSearchInput = {}) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.search.request", ...input },
+      responseType: "wiki.search.response",
+    });
+  }
+
+  async readWiki(id: string) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.read.request", id },
+      responseType: "wiki.read.response",
+    });
+  }
+
+  async writeWiki(input: WikiWriteInput) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.write.request", ...input },
+      responseType: "wiki.write.response",
+    });
   }
 
   async readProjectConfig(repoRoot: string, requestId?: string): Promise<ReadProjectConfigPayload> {
