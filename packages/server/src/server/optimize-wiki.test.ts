@@ -118,3 +118,33 @@ test("Wiki access guidance survives company prompt customization without embeddi
     "Optimize Wiki",
   );
 });
+
+test("indexes article links and hierarchy and prevents cyclic page moves", async () => {
+  const root = await wiki.write({ title: "Products", body: "Overview", expectedRevision: null });
+  const child = await wiki.write({
+    title: "Care",
+    body: `[[${root.id}|Products]] and [[Support]]`,
+    parentId: root.id,
+    expectedRevision: null,
+  });
+  const index = await wiki.index();
+  expect(index.find((entry) => entry.id === child.id)).toMatchObject({
+    parentId: root.id,
+    links: [root.id, "Support"],
+  });
+  await expect(
+    wiki.write({ ...root, parentId: child.id, expectedRevision: root.revision }),
+  ).rejects.toMatchObject({ code: "invalid" });
+  await expect(
+    wiki.write({ ...child, parentId: child.id, expectedRevision: child.revision }),
+  ).rejects.toMatchObject({ code: "invalid" });
+  // Older clients omit hierarchy metadata; editing content must not silently move a page.
+  const saved = await wiki.write({
+    id: child.id,
+    title: child.title,
+    body: "Updated",
+    expectedRevision: child.revision,
+  });
+  expect(saved.parentId).toBe(root.id);
+  expect((await wiki.index()).find((entry) => entry.id === child.id)?.links).toEqual([]);
+});

@@ -24,6 +24,8 @@ test("failed and conflicting saves preserve the complete editable draft", async 
   expect(model.getState()).toEqual({
     title: "New title",
     body: "My unsaved context",
+    parentId: null,
+    parentTitle: "Top level",
     status: "editing",
     error: "Someone changed this page.",
     canSave: true,
@@ -33,7 +35,12 @@ test("failed and conflicting saves preserve the complete editable draft", async 
 test("new drafts do not inherit edited page identity, revision, or contents", async () => {
   const model = openWikiEditor({
     write: async (input) => {
-      expect(input).toEqual({ expectedRevision: null, title: "New page", body: "New context" });
+      expect(input).toEqual({
+        expectedRevision: null,
+        title: "New page",
+        body: "New context",
+        parentId: null,
+      });
       return { ...page, ...input };
     },
   });
@@ -64,4 +71,24 @@ test("saving uses the opened revision and prevents double submission", async () 
   expect(writes).toBe(1);
   finish({ ...page, body: "Updated context" });
   expect(await saving).toMatchObject({ body: "Updated context" });
+});
+
+test("moving an article alone is a saveable change and keeps its selected parent on failure", async () => {
+  const parentId = "8e60d821-d9ee-48da-981a-1c46e9a9d3eb";
+  const model = openWikiEditor({
+    page,
+    write: async (input) => {
+      expect(input.parentId).toBe(parentId);
+      throw new Error("Conflict");
+    },
+  });
+  model.setParent(parentId, "Products");
+  expect(model.getState().canSave).toBe(true);
+  await model.save();
+  expect(model.getState()).toMatchObject({
+    parentId,
+    parentTitle: "Products",
+    error: "Conflict",
+    status: "editing",
+  });
 });

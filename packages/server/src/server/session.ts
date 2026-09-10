@@ -2440,6 +2440,7 @@ export class Session {
 
   private dispatchWikiMessage(msg: SessionInboundMessage): Promise<void> | undefined {
     switch (msg.type) {
+      case "wiki.index.request":
       case "wiki.search.request":
       case "wiki.read.request":
       case "wiki.write.request":

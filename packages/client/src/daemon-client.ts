@@ -4926,6 +4926,13 @@ export class DaemonClient {
     this.sendSessionMessageStrict(response);
   }
 
+  async indexWiki() {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.index.request" },
+      responseType: "wiki.index.response",
+    });
+  }
+
   async searchWiki(input: WikiSearchInput = {}) {
     return this.sendCorrelatedSessionRequest({
       message: { type: "wiki.search.request", ...input },

@@ -50,6 +50,8 @@ jobs:
           NODE
       - run: npm ci --no-audit --no-fund
       - run: npm run format:check
+      - name: Install embedded Pi runtime
+        run: npm ci --prefix packages/desktop/pi-runtime --omit=dev --ignore-scripts --no-audit --no-fund --workspaces=false
       - name: Build and validate source
         run: |
           npm run build:server
@@ -71,6 +73,7 @@ jobs:
           (cd packages/desktop && npx electron-builder --config electron-builder.yml --publish never --mac --arm64 -c.publish.channel=latest -c.publish.releaseType=draft)
           codesign --verify --deep --strict packages/desktop/release/mac-arm64/Optimize.app
           spctl --assess --type execute packages/desktop/release/mac-arm64/Optimize.app
+          node packages/desktop/scripts/verify-embedded-pi.mjs
           test -s packages/desktop/release/latest-mac.yml
       - name: Upload to an Optimize draft release
         env:

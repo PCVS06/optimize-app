@@ -402,6 +402,14 @@ async function startDaemon(): Promise<DesktopDaemonStatus> {
     envMode: "internal",
     env: invocation.env,
     envOverlay: {
+      ...(app.isPackaged && process.platform === "darwin"
+        ? {
+            PI_COMMAND: path.join(process.resourcesPath, "bin", "pi"),
+            PATH: [path.join(process.resourcesPath, "bin"), invocation.env.PATH]
+              .filter(Boolean)
+              .join(path.delimiter),
+          }
+        : {}),
       PASEO_DESKTOP_MANAGED: "1",
       PASEO_CLI: getBundledCliShimPath(),
       PASEO_WEB_UI_ENABLED: "false",

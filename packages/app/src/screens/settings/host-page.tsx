@@ -973,7 +973,7 @@ function UpdateDaemonCard({ host }: { host: HostProfile }) {
   );
 }
 
-function InjectPaseoToolsCard({ serverId }: { serverId: string }) {
+export function InjectPaseoToolsCard({ serverId }: { serverId: string }) {
   const { t } = useTranslation();
   const isConnected = useHostRuntimeIsConnected(serverId);
   const { config, patchConfig } = useDaemonConfig(serverId);
@@ -1091,7 +1091,7 @@ function EnableTerminalAgentHooksCard({ serverId }: { serverId: string }) {
   );
 }
 
-function AppendSystemPromptCard({ serverId }: { serverId: string }) {
+export function AppendSystemPromptCard({ serverId }: { serverId: string }) {
   const { t } = useTranslation();
   const isConnected = useHostRuntimeIsConnected(serverId);
   const { config, patchConfig } = useDaemonConfig(serverId);

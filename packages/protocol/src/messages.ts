@@ -1,7 +1,9 @@
 import {
+  WikiIndexRequestSchema,
   WikiSearchRequestSchema,
   WikiReadRequestSchema,
   WikiWriteRequestSchema,
+  WikiIndexResponseSchema,
   WikiSearchResponseSchema,
   WikiReadResponseSchema,
   WikiWriteResponseSchema,
@@ -3136,6 +3138,7 @@ export const SessionInboundMessageSchema = z.discriminatedUnion("type", [
   AgentSkillsImportLegacySelectionRequestSchema,
   GetDaemonConfigRequestMessageSchema,
   SetDaemonConfigRequestMessageSchema,
+  WikiIndexRequestSchema,
   WikiSearchRequestSchema,
   WikiReadRequestSchema,
   WikiWriteRequestSchema,
@@ -3538,6 +3541,7 @@ export const ServerInfoStatusPayloadSchema = z
         // COMPAT(daemonSelfUpdate): added in v0.1.93, remove gate after 2026-12-13.
         daemonSelfUpdate: z.boolean().optional(),
         optimizeWiki: z.boolean().optional(),
+        optimizeWikiGraph: z.boolean().optional(),
         // COMPAT(agentForkContext): added in v0.1.102, remove gate after 2026-12-28.
         agentForkContext: z.boolean().optional(),
         // COMPAT(agentForkContextCursor): added in v0.1.108, remove gate after 2027-01-14.
@@ -6571,6 +6575,7 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion("type", [
   DiagnosticsResponseSchema,
   GetDaemonConfigResponseMessageSchema,
   SetDaemonConfigResponseMessageSchema,
+  WikiIndexResponseSchema,
   WikiSearchResponseSchema,
   WikiReadResponseSchema,
   WikiWriteResponseSchema,

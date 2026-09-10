@@ -1,23 +1,24 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { BookOpen, Plus, Pencil, ArrowLeft } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { DaemonClient } from "@getpaseo/client/internal/daemon-client";
-import type { WikiPage, WikiPageSummary } from "@getpaseo/protocol/optimize-wiki";
+import type { WikiPage, WikiPageSummary, WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
 import { MenuHeader } from "@/components/headers/menu-header";
 import { Button } from "@/components/ui/button";
-import { Field, FormTextInput } from "@/components/ui/form-field";
 import { SearchField } from "@/components/ui/search-field";
-import { MarkdownRenderer } from "@/components/markdown/renderer";
 import { HostFilter } from "@/components/hosts/host-filter";
 import { useIsCompactFormFactor } from "@/constants/layout";
-import { getHostRuntimeStore, useHosts, useHostRuntimeSnapshot } from "@/runtime/host-runtime";
+import { useHosts, useHostRuntimeSnapshot } from "@/runtime/host-runtime";
 import { useHostFeature } from "@/runtime/host-features";
 import { useFetchQuery } from "@/data/query";
 import { queryClient } from "@/data/query-client";
-import { openWikiEditor } from "@/wiki/wiki-editor-model";
+import { WikiEditor } from "@/wiki/wiki-editor";
+import { WikiDocument } from "@/wiki/wiki-document";
+import { WikiGraph } from "@/wiki/wiki-graph";
+import { WikiOverview, WikiBreadcrumbs, WikiRelated } from "@/wiki/wiki-navigation";
 
 export function OptimizeWikiScreen() {
   const hosts = useHosts();
@@ -61,7 +62,7 @@ interface WikiHostProps {
 }
 function WikiHost({ serverId, active, onEditingChange }: WikiHostProps) {
   const runtime = useHostRuntimeSnapshot(serverId);
-  const supportsWiki = useHostFeature(serverId, "optimizeWiki");
+  const supportsWiki = useHostFeature(serverId, "optimizeWikiGraph");
   const client = runtime?.client;
   const online = runtime?.connectionStatus === "online";
   return (
@@ -94,10 +95,29 @@ function WikiWorkspace({
 }: WikiWorkspaceProps) {
   const compact = useIsCompactFormFactor();
   const [search, setSearch] = useState("");
+  const [graph, setGraph] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ page?: WikiPage } | null>(null);
   const enabled = active && online && supportsWiki && Boolean(client);
+  const index = useFetchQuery({
+    queryKey: ["optimize-wiki", serverId, "index", connectionEpoch],
+    queryFn: async () => {
+      if (!client) throw new Error("Optimize is disconnected.");
+      const result = await client.indexWiki();
+      if (!result.ok) throw new Error(result.error.message);
+      return result.pages;
+    },
+    enabled,
+    dataShape: "list",
+    staleTimeMs: 5000,
+    refetchInterval: 10000,
+  });
+  const pages = index.data ?? [];
+  const select = useCallback((id: string) => {
+    setSelectedId(id);
+    setGraph(false);
+  }, []);
   const list = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "search", search, offset, connectionEpoch],
     queryFn: async () => {
@@ -109,6 +129,7 @@ function WikiWorkspace({
     enabled,
     dataShape: "list",
     staleTimeMs: 5000,
+    refetchInterval: 10000,
   });
   const openEditor = useCallback(
     (page?: WikiPage) => {
@@ -142,14 +163,18 @@ function WikiWorkspace({
   const retry = useCallback(() => {
     void refetchList();
   }, [refetchList]);
-  const back = useCallback(() => setSelectedId(null), []);
-  const showDetails = Boolean(editor || selectedId);
+  const back = useCallback(() => {
+    setSelectedId(null);
+    setGraph(false);
+  }, []);
+  const showGraph = useCallback(() => {
+    setSelectedId(null);
+    setGraph(true);
+  }, []);
+  const showDetails = Boolean(editor || selectedId || graph);
   return (
     <View style={styles.content}>
-      {online && !supportsWiki && (
-        <Text style={styles.notice}>Update this Optimize host to use the built-in Wiki.</Text>
-      )}
-      {!online && <Text style={styles.notice}>Reconnecting to Optimize… Your draft is kept.</Text>}
+      <WikiConnectionNotice online={online} supportsWiki={supportsWiki} error={index.error} />
       <View style={[styles.columns, compact && styles.columnsCompact]}>
         {(!compact || !showDetails) && (
           <WikiLibrary
@@ -158,7 +183,9 @@ function WikiWorkspace({
             enabled={enabled}
             editing={Boolean(editor)}
             selectedId={selectedId}
-            select={setSelectedId}
+            select={select}
+            onHome={back}
+            onGraph={showGraph}
             search={search}
             onSearch={changeSearch}
             offset={offset}
@@ -173,6 +200,7 @@ function WikiWorkspace({
               <WikiEditor
                 key={editor.page?.id ?? "new"}
                 page={editor.page}
+                pages={pages}
                 serverId={serverId}
                 online={enabled}
                 onSaved={onSaved}
@@ -189,9 +217,21 @@ function WikiWorkspace({
                 compact={compact}
                 onEdit={openEditor}
                 onBack={back}
+                pages={pages}
+                onOpen={select}
               />
             )}
-            {!showDetails && <WikiEmpty onCreate={newPage} enabled={enabled} />}
+            {graph && !editor && (
+              <>
+                <Button size="sm" variant="ghost" onPress={back}>
+                  Wiki home
+                </Button>
+                <WikiGraph pages={pages} onOpen={select} />
+              </>
+            )}
+            {!showDetails && (
+              <WikiLanding pages={pages} select={select} newPage={newPage} enabled={enabled} />
+            )}
           </View>
         )}
       </View>
@@ -205,6 +245,8 @@ interface WikiListData {
   nextOffset: number | null;
 }
 interface WikiLibraryProps {
+  onHome: () => void;
+  onGraph: () => void;
   compact: boolean;
   list: UseQueryResult<WikiListData, Error>;
   enabled: boolean;
@@ -219,6 +261,8 @@ interface WikiLibraryProps {
   retry: () => void;
 }
 function WikiLibrary({
+  onHome,
+  onGraph,
   compact,
   list,
   enabled,
@@ -251,6 +295,20 @@ function WikiLibrary({
           accessibilityLabel="New Wiki page"
         >
           New page
+        </Button>
+      </View>
+      <View style={styles.actions}>
+        <Button size="sm" variant="ghost" onPress={onHome} disabled={editing}>
+          Home
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onPress={onGraph}
+          disabled={editing || !enabled}
+          testID="wiki-open-graph"
+        >
+          Graph
         </Button>
       </View>
       <View style={styles.searchRow} testID="wiki-search-row">
@@ -364,6 +422,8 @@ function WikiRow({
 }
 
 interface WikiReaderProps {
+  pages: readonly WikiIndexEntry[];
+  onOpen: (id: string) => void;
   serverId: string;
   id: string;
   client: DaemonClient | null;
@@ -374,6 +434,8 @@ interface WikiReaderProps {
   onBack: () => void;
 }
 function WikiReader({
+  pages,
+  onOpen,
   serverId,
   id,
   client,
@@ -383,6 +445,8 @@ function WikiReader({
   onEdit,
   onBack,
 }: WikiReaderProps) {
+  const scroll = useRef<ScrollView>(null);
+  const jump = useCallback((y: number) => scroll.current?.scrollTo({ y, animated: true }), []);
   const query = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "page", id, connectionEpoch],
     queryFn: async () => {
@@ -394,6 +458,7 @@ function WikiReader({
     enabled,
     dataShape: "value",
     staleTimeMs: 5000,
+    refetchInterval: 10000,
   });
   const edit = useCallback(() => {
     if (query.data) onEdit(query.data);
@@ -403,7 +468,7 @@ function WikiReader({
     void refetchPage();
   }, [refetchPage]);
   return (
-    <ScrollView contentContainerStyle={styles.article}>
+    <ScrollView ref={scroll} contentContainerStyle={styles.article}>
       <View style={styles.articleToolbar}>
         {compact ? (
           <Button size="sm" variant="ghost" leftIcon={ArrowLeft} onPress={onBack}>
@@ -423,15 +488,30 @@ function WikiReader({
           Edit page
         </Button>
       </View>
-      <WikiArticle page={query.data} error={query.error} retry={retry} />
+      <WikiBreadcrumbs id={id} pages={pages} onOpen={onOpen} onHome={onBack} />
+      <WikiArticle
+        page={query.data}
+        error={query.error}
+        retry={retry}
+        pages={pages}
+        onOpen={onOpen}
+        onJump={jump}
+      />
+      {query.data && <WikiRelated id={id} pages={pages} onOpen={onOpen} />}
     </ScrollView>
   );
 }
 function WikiArticle({
+  pages,
+  onOpen,
+  onJump,
   page,
   error,
   retry,
 }: {
+  pages: readonly WikiIndexEntry[];
+  onOpen: (id: string) => void;
+  onJump: (y: number) => void;
   page?: WikiPage;
   error: Error | null;
   retry: () => void;
@@ -454,12 +534,12 @@ function WikiArticle({
       <Text style={styles.updated}>
         Updated {new Date(page.updatedAt).toLocaleString()} · Available to the assistant
       </Text>
-      <View testID="wiki-article-body">
-        <MarkdownRenderer
-          text={page.body || "This page is empty. Choose Edit page to add context."}
-          enableHtmlish={false}
-        />
-      </View>
+      <WikiDocument
+        body={page.body || "This page is empty. Choose Edit page to add context."}
+        pages={pages}
+        onOpen={onOpen}
+        onJump={onJump}
+      />
     </>
   );
 }
@@ -476,88 +556,6 @@ function WikiEmpty({ onCreate, enabled }: { onCreate: () => void; enabled: boole
       </Button>
       <Text style={styles.caption}>Shared across projects on this Optimize host.</Text>
     </View>
-  );
-}
-
-interface WikiEditorProps {
-  page?: WikiPage;
-  serverId: string;
-  online: boolean;
-  onSaved: (page: WikiPage) => void;
-  onCancel: () => void;
-}
-function WikiEditor({ page, serverId, online, onSaved, onCancel }: WikiEditorProps) {
-  const [model] = useState(() =>
-    openWikiEditor({
-      page,
-      write: async (input) => {
-        const client = getHostRuntimeStore().getSnapshot(serverId)?.client;
-        if (!client) throw new Error("Optimize is disconnected. Your draft is kept.");
-        const result = await client.writeWiki(input);
-        if (!result.ok) throw new Error(result.error.message);
-        return result.page;
-      },
-    }),
-  );
-  const state = useSyncExternalStore(model.subscribe, model.getState, model.getState);
-  const compact = useIsCompactFormFactor();
-  const size = compact ? "md" : "sm";
-  const save = useCallback(async () => {
-    const saved = await model.save();
-    if (saved) onSaved(saved);
-  }, [model, onSaved]);
-  return (
-    <ScrollView contentContainerStyle={styles.article} keyboardShouldPersistTaps="handled">
-      <View style={styles.articleToolbar}>
-        <Text style={styles.eyebrow}>{page ? "EDIT PAGE" : "NEW PAGE"}</Text>
-        <View style={styles.actions}>
-          <Button
-            size={size}
-            variant="ghost"
-            onPress={onCancel}
-            disabled={state.status === "saving"}
-            testID="wiki-cancel"
-          >
-            Cancel
-          </Button>
-          <Button
-            size={size}
-            onPress={save}
-            disabled={!online || !state.canSave}
-            loading={state.status === "saving"}
-            testID="wiki-save"
-          >
-            Save page
-          </Button>
-        </View>
-      </View>
-      <Field label="Page title">
-        <FormTextInput
-          size={size}
-          initialValue={state.title}
-          onChangeText={model.setTitle}
-          placeholder="For example: Product care and maintenance"
-          maxLength={160}
-          editable={state.status !== "saving"}
-          accessibilityLabel="Wiki page title"
-          testID="wiki-title-input"
-        />
-      </Field>
-      <Field label="Knowledge" error={state.error}>
-        <FormTextInput
-          size={size}
-          initialValue={state.body}
-          onChangeText={model.setBody}
-          placeholder="Add the facts, guidance, and source links your team and assistant should use. Markdown formatting is supported."
-          multiline
-          style={styles.editorBody}
-          maxLength={100000}
-          editable={state.status !== "saving"}
-          accessibilityLabel="Wiki page content"
-          testID="wiki-body-input"
-        />
-      </Field>
-    </ScrollView>
   );
 }
 
@@ -622,3 +620,39 @@ const styles = StyleSheet.create((theme) => ({
   message: { padding: 32, color: theme.colors.foregroundMuted },
   messageBlock: { gap: 12 },
 }));
+
+function WikiConnectionNotice({
+  online,
+  supportsWiki,
+  error,
+}: {
+  online: boolean;
+  supportsWiki: boolean;
+  error: Error | null;
+}) {
+  if (!online)
+    return <Text style={styles.notice}>Reconnecting to Optimize… Your draft is kept.</Text>;
+  if (!supportsWiki)
+    return <Text style={styles.notice}>Update this Optimize host to use the connected Wiki.</Text>;
+  if (error) return <Text style={styles.notice}>{error.message}</Text>;
+  return null;
+}
+
+function WikiLanding({
+  pages,
+  select,
+  newPage,
+  enabled,
+}: {
+  pages: readonly WikiIndexEntry[];
+  select: (id: string) => void;
+  newPage: () => void;
+  enabled: boolean;
+}) {
+  if (!pages.length) return <WikiEmpty onCreate={newPage} enabled={enabled} />;
+  return (
+    <ScrollView contentContainerStyle={styles.article}>
+      <WikiOverview pages={pages} onOpen={select} />
+    </ScrollView>
+  );
+}

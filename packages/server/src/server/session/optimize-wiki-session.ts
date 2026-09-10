@@ -9,10 +9,13 @@ interface WikiSessionOptions {
 }
 type WikiRequest = Extract<
   SessionInboundMessage,
-  { type: "wiki.search.request" | "wiki.read.request" | "wiki.write.request" }
+  {
+    type: "wiki.index.request" | "wiki.search.request" | "wiki.read.request" | "wiki.write.request";
+  }
 >;
 
 const responseTypes = {
+  "wiki.index.request": "wiki.index.response",
   "wiki.search.request": "wiki.search.response",
   "wiki.read.request": "wiki.read.response",
   "wiki.write.request": "wiki.write.response",
@@ -28,6 +31,12 @@ export class OptimizeWikiSession {
     const requestId = message.requestId;
     try {
       switch (message.type) {
+        case "wiki.index.request":
+          this.options.emit({
+            type: "wiki.index.response",
+            payload: { requestId, ok: true, pages: await this.store.index() },
+          });
+          return;
         case "wiki.search.request":
           this.options.emit({
             type: "wiki.search.response",

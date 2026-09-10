@@ -29,3 +29,9 @@ A full dependency license review and distribution-notice audit are still require
 ## Company Wiki
 
 Open **Optimize Wiki** at the bottom of the sidebar to build the shared knowledge base for staff and the assistant. Pages stay in the connected host’s Optimize data directory, separate from this repository. See [Wiki storage, assistant access, and scope](docs/optimize-wiki.md).
+
+### Embedded Mac runtime
+
+The Optimize Mac app includes Pi 0.84.2 (`@earendil-works/pi-coding-agent`, the current upstream package name), Node via the signed Electron Helper, and npm package tooling. Staff do not need to install Pi or Node separately. The runtime is pinned in `packages/desktop/pi-runtime/package-lock.json` and is updated with Optimize builds from this repository. Pi self-updating is disabled in the bundled launcher. Model credentials are still required; existing local Pi credentials remain usable.
+
+The Mac build verifies version commands and a live Pi state RPC with only macOS system tools on PATH. [Engineering and Wiki team sharing](docs/optimize-wiki.md) describes configuration and current shared-host limits. Upstream Pi is maintained at https://github.com/earendil-works/pi (the former `badlogic/pi-mono` URL redirects there). Its license and dependency notices ship with the embedded runtime.

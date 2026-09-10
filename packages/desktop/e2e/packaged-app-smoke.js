@@ -866,6 +866,50 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     .getByTestId("wiki-article-body")
     .getByText("Updated company guidance. WIKI_CONTEXT_UPDATED_719.")
     .waitFor();
+  await page.getByTestId("wiki-table-of-contents").getByText("Care", { exact: true }).waitFor();
+  await page.getByTestId("wiki-new-page").click();
+  await page.getByTestId("wiki-title-input").fill("Products overview");
+  await page.getByTestId("wiki-body-input").fill(`## Guides\n[[${savedWiki.id}|Care article]]`);
+  await page.getByTestId("wiki-preview").click();
+  await page
+    .getByTestId("wiki-editor-preview")
+    .getByText("Care article", { exact: true })
+    .waitFor();
+  await page.getByTestId("wiki-save").click();
+  await page.getByTestId("wiki-article-body").getByText("Care article", { exact: true }).click();
+  await page.getByTestId("wiki-article-title").filter({ hasText: "Product care guide" }).waitFor();
+  await page
+    .getByTestId("wiki-backlinks")
+    .getByText("Products overview", { exact: true })
+    .waitFor();
+  await page.getByTestId("wiki-edit-page").click();
+  await page.getByTestId("wiki-parent-trigger").click();
+  const overview = fs
+    .readdirSync(path.join(daemonHome, "wiki"))
+    .filter((file) => file.endsWith(".json"))
+    .map((file) => JSON.parse(fs.readFileSync(path.join(daemonHome, "wiki", file), "utf8")))
+    .find((entry) => entry.title === "Products overview");
+  if (!overview) throw new Error("Overview article is missing");
+  await page.getByTestId(`wiki-parent-option-${overview.id}`).click();
+  await page.getByTestId("wiki-save").click();
+  await page.getByTestId("wiki-article-title").waitFor();
+  const updatedChild = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
+  if (!updatedChild.parentId) throw new Error("Wiki hierarchy did not persist");
+  await page.getByTestId("wiki-open-graph").click();
+  await page.getByTestId("wiki-graph").waitFor();
+  if (artifactDir)
+    await page.screenshot({
+      path: path.join(artifactDir, "optimize-wiki-graph.png"),
+      fullPage: true,
+    });
+  await page
+    .getByTestId("wiki-graph")
+    .getByRole("button", { name: "Products overview", exact: true })
+    .click();
+  await page
+    .getByTestId("wiki-subpages")
+    .getByText("Product care guide", { exact: true })
+    .waitFor();
   if (artifactDir)
     await page.screenshot({ path: path.join(artifactDir, "optimize-wiki.png"), fullPage: true });
 }
@@ -977,11 +1021,11 @@ async function smokePackagedDesktopApp({ appPath }) {
 
     // Optimize: exercise the actual settings UI against the isolated packaged daemon.
     await page.getByTestId("sidebar-settings").click();
-    await page.getByTestId("settings-host-section-agents").waitFor({ timeout: 30000 });
+    await page.getByTestId("settings-host-section-engineering").waitFor({ timeout: 30000 });
     if (await page.getByTestId("settings-host-section-terminals").isVisible()) {
       throw new Error("Technical settings must be collapsed by default");
     }
-    await page.getByTestId("settings-host-section-agents").click();
+    await page.getByTestId("settings-host-section-engineering").click();
     await page.getByTestId("host-page-append-system-prompt-edit").click();
     const companyInstructions = "Optimize smoke: use the company product catalog.";
     await page.getByTestId("host-page-append-system-prompt-input").fill(companyInstructions);
@@ -997,6 +1041,12 @@ async function smokePackagedDesktopApp({ appPath }) {
         fullPage: true,
       });
     }
+    await page.getByTestId("engineering-tab-context").click();
+    await page.getByText("Context engineering", { exact: true }).waitFor();
+    await page.getByTestId("engineering-tab-agents").click();
+    await page.getByText("Agent behavior", { exact: true }).waitFor();
+    await page.getByTestId("engineering-tab-models").click();
+    await page.getByTestId("engineering-tab-extensions").click();
     await page.getByTestId("settings-advanced-options").click();
     await page.getByTestId("settings-host-section-terminals").waitFor();
     await stopDaemonForCleanup();

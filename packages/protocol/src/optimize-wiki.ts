@@ -4,6 +4,7 @@ export const WikiPageIdSchema = z.string().uuid();
 export const WikiPageContentSchema = z.object({
   title: z.string().trim().min(1).max(160),
   body: z.string().max(100_000),
+  parentId: WikiPageIdSchema.nullable().optional(),
 });
 export const WikiPageSchema = WikiPageContentSchema.extend({
   id: WikiPageIdSchema,
@@ -68,6 +69,26 @@ export const WikiWriteResponseSchema = z.object({
   type: z.literal("wiki.write.response"),
   payload: z.union([
     z.object({ requestId: z.string(), ok: z.literal(true), page: WikiPageSchema }),
+    z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
+  ]),
+});
+
+export const WikiIndexEntrySchema = z.object({
+  id: WikiPageIdSchema,
+  title: z.string(),
+  parentId: WikiPageIdSchema.nullable(),
+  updatedAt: z.string(),
+  links: z.array(z.string()),
+});
+export type WikiIndexEntry = z.infer<typeof WikiIndexEntrySchema>;
+export const WikiIndexRequestSchema = z.object({
+  type: z.literal("wiki.index.request"),
+  requestId: z.string(),
+});
+export const WikiIndexResponseSchema = z.object({
+  type: z.literal("wiki.index.response"),
+  payload: z.discriminatedUnion("ok", [
+    z.object({ requestId: z.string(), ok: z.literal(true), pages: z.array(WikiIndexEntrySchema) }),
     z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
   ]),
 });

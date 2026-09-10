@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+BIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+HELPER="${BIN_DIR}/../../Frameworks/Optimize Helper.app/Contents/MacOS/Optimize Helper"
+exec env ELECTRON_RUN_AS_NODE=1 "$HELPER" "$@"

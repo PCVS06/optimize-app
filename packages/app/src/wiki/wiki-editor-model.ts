@@ -7,20 +7,25 @@ import {
 interface WikiEditorState {
   title: string;
   body: string;
+  parentId: string | null;
+  parentTitle: string;
   status: "editing" | "saving";
   error: string | null;
   canSave: boolean;
 }
 interface WikiEditorOptions {
   page?: WikiPage;
+  parentTitle?: string;
   write: (input: WikiWriteInput) => Promise<WikiPage>;
 }
 
-export function openWikiEditor({ page, write }: WikiEditorOptions) {
+export function openWikiEditor({ page, write, parentTitle = "Top level" }: WikiEditorOptions) {
   const listeners = new Set<() => void>();
   let state: WikiEditorState = {
     title: page?.title ?? "",
     body: page?.body ?? "",
+    parentId: page?.parentId ?? null,
+    parentTitle,
     status: "editing",
     error: null,
     canSave: false,
@@ -32,7 +37,9 @@ export function openWikiEditor({ page, write }: WikiEditorOptions) {
       Boolean(state.title.trim()) &&
       state.title.trim().length <= 160 &&
       state.body.length <= 100_000 &&
-      (state.title !== page?.title || state.body !== page?.body);
+      (state.title !== page?.title ||
+        state.body !== page?.body ||
+        state.parentId !== (page?.parentId ?? null));
     listeners.forEach((listener) => listener());
   }
   return {
@@ -45,6 +52,9 @@ export function openWikiEditor({ page, write }: WikiEditorOptions) {
     },
     setTitle(title: string) {
       if (state.status !== "saving") publish({ title, error: null });
+    },
+    setParent(parentId: string | null, label: string) {
+      if (state.status !== "saving") publish({ parentId, parentTitle: label, error: null });
     },
     setBody(body: string) {
       if (state.status !== "saving") publish({ body, error: null });
@@ -59,6 +69,7 @@ export function openWikiEditor({ page, write }: WikiEditorOptions) {
             expectedRevision: page?.revision ?? null,
             title: state.title,
             body: state.body,
+            parentId: state.parentId,
           }),
         );
         return saved;

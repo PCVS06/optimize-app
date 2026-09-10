@@ -46,4 +46,8 @@ CLI_ENTRYPOINT="${RESOURCES_DIR}/app.asar/node_modules/@getpaseo/cli/dist/index.
 
 # PASEO_DESKTOP_MANAGED marks daemons started through this bundled CLI as
 # desktop-managed, so the desktop app restarts them when it upgrades.
+if [ -x "${RESOURCES_DIR}/bin/pi" ]; then
+  export PI_COMMAND="${RESOURCES_DIR}/bin/pi"
+  export PATH="${RESOURCES_DIR}/bin:${PATH:-/usr/bin:/bin}"
+fi
 exec env ELECTRON_RUN_AS_NODE=1 PASEO_NODE_ENV=production PASEO_DESKTOP_MANAGED=1 PASEO_CLI="${SCRIPT_PATH}" "${APP_EXECUTABLE}" --disable-warning=DEP0040 "${RUNNER_PATH}" node-script "${CLI_ENTRYPOINT}" "$@"

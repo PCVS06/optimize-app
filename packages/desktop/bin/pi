@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+BIN_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+RESOURCES_DIR=$(CDPATH= cd -- "${BIN_DIR}/.." && pwd)
+HELPER="${RESOURCES_DIR}/../Frameworks/Optimize Helper.app/Contents/MacOS/Optimize Helper"
+for argument in "$@"; do
+  if [ "$argument" = "--self" ]; then
+    echo "The assistant runtime is updated through Optimize app updates." >&2
+    exit 1
+  fi
+done
+exec env ELECTRON_RUN_AS_NODE=1 PATH="${BIN_DIR}:${PATH:-/usr/bin:/bin}" "${HELPER}" "${RESOURCES_DIR}/pi-runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js" "$@"

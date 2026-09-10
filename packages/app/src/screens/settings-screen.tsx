@@ -1,3 +1,4 @@
+import { EngineeringPage } from "@/screens/settings/engineering-page";
 import { AdvancedOptions } from "@/components/advanced-options";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
@@ -109,9 +110,7 @@ import {
 import {
   HostConnectionsPage,
   HostPairDevicePage,
-  HostAgentsPage,
   HostSettingsPage,
-  HostProvidersPage,
   HostUsagePage,
   HostWorkspacesPage,
   HostTerminalsPage,
@@ -119,7 +118,6 @@ import {
 import { resolvePluginIcon } from "@/plugins/icons";
 import { PluginSettingsContent } from "@/plugins/settings";
 import { useInstalledPlugins } from "@/plugins/registry";
-import { HostPluginsPage } from "@/screens/settings/plugins-page";
 import { MetadataGenerationPage } from "@/screens/settings/metadata-generation-page";
 import ProjectsScreen from "@/screens/projects-screen";
 import ProjectSettingsScreen from "@/screens/project-settings-screen";
@@ -195,6 +193,7 @@ const HOST_SECTION_ITEMS: HostSectionItem[] = [
   { id: "projects", labelKey: "settings.hostSections.projects", icon: FolderOpen },
   { id: "connections", labelKey: "settings.hostSections.connections", icon: Network },
   { id: "pair-device", labelKey: "openProject.tiles.pairDevice.title", icon: Smartphone },
+  { id: "engineering", labelKey: "Engineering", icon: Bot },
   { id: "agents", labelKey: "optimize.assistant", icon: Bot },
   { id: "metadata", labelKey: "settings.hostSections.metadata", icon: Sparkles },
   { id: "workspaces", labelKey: "settings.hostSections.workspaces", icon: FolderGit2 },
@@ -215,20 +214,33 @@ function renderHostSettingsContent(
       return <HostConnectionsPage serverId={view.serverId} />;
     case "pair-device":
       return <HostPairDevicePage serverId={view.serverId} />;
+    case "engineering":
     case "agents":
-      return <HostAgentsPage serverId={view.serverId} />;
+      return <EngineeringPage key={view.serverId} serverId={view.serverId} />;
     case "metadata":
       return <MetadataGenerationPage serverId={view.serverId} />;
     case "workspaces":
       return <HostWorkspacesPage serverId={view.serverId} />;
     case "providers":
-      return <HostProvidersPage serverId={view.serverId} />;
+      return (
+        <EngineeringPage
+          key={`${view.serverId}-models`}
+          serverId={view.serverId}
+          initialSection="Models"
+        />
+      );
     case "usage":
       return <HostUsagePage serverId={view.serverId} />;
     case "terminals":
       return <HostTerminalsPage serverId={view.serverId} />;
     case "plugins":
-      return <HostPluginsPage serverId={view.serverId} />;
+      return (
+        <EngineeringPage
+          key={`${view.serverId}-extensions`}
+          serverId={view.serverId}
+          initialSection="Extensions"
+        />
+      );
     case "host":
       return <HostSettingsPage serverId={view.serverId} onHostRemoved={onHostRemoved} />;
   }
@@ -1103,13 +1115,16 @@ function SettingsSidebar({
   if (view.kind === "project") selectedHostSection = "projects";
   if (view.kind === "plugin") selectedHostSection = "plugins";
 
+  if (selectedHostSection && ["agents", "providers", "plugins"].includes(selectedHostSection))
+    selectedHostSection = "engineering";
+
   const appBasics = new Set<SettingsSectionSlug>([
     "general",
     "appearance",
     "notifications",
     "about",
   ]);
-  const companyBasics = new Set<HostSectionSlug>(["agents", "projects", "providers", "plugins"]);
+  const companyBasics = new Set<HostSectionSlug>(["engineering", "projects"]);
   const activeAdvanced = Boolean(
     (selectedSectionId && !appBasics.has(selectedSectionId)) ||
     (selectedHostSection && !companyBasics.has(selectedHostSection)),
@@ -1209,7 +1224,11 @@ function SettingsSidebar({
                 onAddHost={onAddHost}
                 enableBuiltInDaemonOption={enableBuiltInDaemonOption}
               />
-              {HOST_SECTION_ITEMS.filter((item) => !companyBasics.has(item.id)).map((item) => (
+              {HOST_SECTION_ITEMS.filter(
+                (item) =>
+                  !companyBasics.has(item.id) &&
+                  !["agents", "providers", "plugins"].includes(item.id),
+              ).map((item) => (
                 <SidebarHostSectionButton
                   key={item.id}
                   itemId={item.id}

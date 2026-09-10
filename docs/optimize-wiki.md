@@ -28,3 +28,25 @@ The app uses additive `wiki.search`, `wiki.read`, and `wiki.write` request/respo
 ## Validation
 
 Store tests cover persistence, content search, host isolation, pagination, stale/concurrent saves, revision recovery, corrupt data, invalid IDs, symlinks, and input limits. Editor model tests cover preserved drafts and duplicate-submit protection. The Mac build also exercises the real packaged sidebar, page creation, editing, full-text search, persisted contents, and reopening after a renderer reload.
+
+## Connected articles
+
+Articles can live inside other articles. The containing article becomes an overview page with an automatically generated list of subpages. The home page lists top-level articles, and breadcrumbs show where the current article belongs. Invalid moves into the same article or one of its descendants are rejected. Existing articles keep their IDs and content when upgraded.
+
+Use `[[Article title]]` to refer to an unambiguous title, or insert a link through the editor to save `[[page-id|label]]`. ID links survive title changes. Unknown or ambiguous title links are shown as unresolved. Backlinks list articles pointing at the current page. Headings create a clickable table of contents; code fences are excluded. The editor supports free Markdown, heading/bold/list/table insertion, page linking, and preview.
+
+The graph combines article links and hierarchy. Search includes each matching article's neighbors. It displays up to 80 articles at a time; search narrows larger Wikis. The index supports up to 10,000 articles and reports an explicit limit error beyond that. Full-text article search remains paginated. The graph/index feature is gated once by `optimizeWikiGraph`; older hosts must be updated.
+
+Open Wiki views refresh every 10 seconds while active. Drafts keep their opened revision. A conflicting edit fails visibly instead of overwriting another employee's changes. This is shared storage with conflict detection, not simultaneous editing of the same paragraph.
+
+## Team rollout
+
+Use one central Optimize host for the company Wiki and point the staff apps at it. The host owns storage, search, and assistant access; staff apps edit and read that same source. Local host copies are independent. Do not put live JSON files in a consumer sync folder as a substitute for coordinating writes.
+
+The existing host supports authenticated device principals, revocable credentials, and daemon-wide grants. `workspace.read` permits Wiki reading, `workspace.write` permits editing, and `daemon.manage` controls harness configuration. These grants also cover other workspace or host operations; they are not dedicated Wiki roles. See [permissions](permissions.md).
+
+For a wider company rollout, add company identity/sign-in, employee provisioning and revocation, dedicated Wiki permissions enforced by every read/write/index path and AI retrieval, backups with a tested restore, and audit history showing the editor. Choose the central hosting location and retention policy with Optimize. None of these organizational settings are silently provisioned by installing the Mac app. Per-page restrictions and simultaneous collaborative editing remain future work.
+
+## Engineering
+
+Settings → Engineering groups company/project instructions, context sources and tools, agent profiles and skills, models, and extensions. Existing deep links into agent/model/plugin settings still reach the corresponding engineering area. Context rules are configured through company/project instructions and the available source/tool switches; this release does not add a separate retrieval ranking or token-budget engine.
