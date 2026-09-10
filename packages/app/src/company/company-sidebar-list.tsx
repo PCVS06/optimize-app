@@ -209,6 +209,7 @@ function ProjectChats({ project, projects, onNavigate, onCreateChat }: ProjectCh
       <Button
         variant="ghost"
         size="sm"
+        leftIcon={Plus}
         onPress={onCreateChat}
         style={styles.newProjectChat}
         testID={`company-new-chat-${project.projectId}`}

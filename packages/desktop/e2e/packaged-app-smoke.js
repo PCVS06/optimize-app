@@ -958,7 +958,12 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByRole("button", { name: "Add favorite", exact: true }).click();
   await page.getByTestId(`wiki-favorite-${savedWiki.id}`).waitFor();
   await page.getByTestId("wiki-trash-page").click();
-  await page.getByRole("button", { name: "Move to Trash", exact: true }).click();
+  const trashConfirmation = page.getByTestId("wiki-trash-confirmation");
+  await trashConfirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  if (JSON.parse(fs.readFileSync(wikiFile, "utf8")).trashedAt)
+    throw new Error("Canceling trash changed the article");
+  await page.getByTestId("wiki-trash-page").click();
+  await trashConfirmation.getByRole("button", { name: "Move to Trash", exact: true }).click();
   await page.getByTestId("wiki-open-trash").click();
   await page.getByTestId(`wiki-trashed-page-${savedWiki.id}`).waitFor();
   const trashed = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
@@ -1089,6 +1094,14 @@ async function verifyCompanyMemory({ page, daemonHome, artifactDir }) {
   );
   if (record.projectId !== null) throw new Error("Company memory has wrong scope");
   await page.reload();
+  await page
+    .locator('[data-testid="sidebar-settings"], [data-testid="settings-host-section-memory"]')
+    .filter({ visible: true })
+    .first()
+    .waitFor();
+  if (await page.getByTestId("sidebar-settings").isVisible()) {
+    await page.getByTestId("sidebar-settings").click();
+  }
   await page.getByTestId("settings-host-section-memory").click();
   const row = page.getByTestId("memory-record").filter({ hasText: "Customer reply language" });
   await row
@@ -1109,7 +1122,12 @@ async function verifyCompanyMemory({ page, daemonHome, artifactDir }) {
   if (artifactDir)
     await page.screenshot({ path: path.join(artifactDir, "optimize-memory.png"), fullPage: true });
   await row.getByRole("button", { name: "Forget", exact: true }).click();
-  await page.getByRole("button", { name: "Forget", exact: true }).last().click();
+  const forgetConfirmation = page.getByTestId("memory-forget-confirmation");
+  await forgetConfirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  if (!JSON.parse(fs.readFileSync(file, "utf8")).some((entry) => entry.id === record.id))
+    throw new Error("Canceling forget removed the memory");
+  await row.getByRole("button", { name: "Forget", exact: true }).click();
+  await forgetConfirmation.getByRole("button", { name: "Forget", exact: true }).click();
   await waitForSavedRecord(
     file,
     (rows) => rows.every((entry) => entry.id !== record.id),

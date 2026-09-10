@@ -18,7 +18,7 @@ import { WikiDocument } from "@/wiki/wiki-document";
 import { WikiTrash } from "@/wiki/wiki-trash";
 import { WikiDraftList } from "@/wiki/wiki-draft-list";
 import type { WikiDraftEntry } from "@/wiki/wiki-drafts";
-import { confirmDialog } from "@/utils/confirm-dialog";
+import { ConfirmationSheet } from "@/components/confirmation-sheet";
 import { WikiBreadcrumbs, WikiRelated } from "@/wiki/wiki-navigation";
 
 import { WikiLibrary } from "@/wiki/wiki-library";
@@ -411,6 +411,7 @@ function WikiReader({
 }: WikiReaderProps) {
   const scroll = useRef<ScrollView>(null);
   const [history, setHistory] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<WikiPage | null>(null);
   const [archiveState, setArchiveState] = useState<{ pending: boolean; error: string | null }>({
     pending: false,
     error: null,
@@ -441,26 +442,23 @@ function WikiReader({
     },
     [query.data, onEdit],
   );
+  const requestArchive = useCallback(() => {
+    if (!query.data) return;
+    setArchiveState({ pending: false, error: null });
+    setArchiveTarget(query.data);
+  }, [query.data]);
+  const cancelArchive = useCallback(() => setArchiveTarget(null), []);
   const archive = useCallback(async () => {
-    if (!query.data || !client) return;
-    if (
-      !(await confirmDialog({
-        title: `Move “${query.data.title}” to Trash?`,
-        message:
-          "The article and its history can be restored at any time. Subpages remain available at Wiki home. Links to this article will become available again when it is restored.",
-        confirmLabel: "Move to Trash",
-        destructive: true,
-      }))
-    )
-      return;
+    if (!archiveTarget || !client || archiveState.pending) return;
     setArchiveState({ pending: true, error: null });
     try {
       const result = await client.archiveWiki({
         id,
-        expectedRevision: query.data.revision,
+        expectedRevision: archiveTarget.revision,
         archived: true,
       });
       if (!result.ok) throw new Error(result.error.message);
+      setArchiveTarget(null);
       onArchived();
     } catch (error) {
       setArchiveState({
@@ -468,7 +466,7 @@ function WikiReader({
         error: error instanceof Error ? error.message : "Could not move this article to Trash.",
       });
     }
-  }, [query.data, client, id, onArchived]);
+  }, [archiveTarget, archiveState.pending, client, id, onArchived]);
   const refetchPage = query.refetch;
   const retry = useCallback(() => {
     void refetchPage();
@@ -488,7 +486,7 @@ function WikiReader({
             size="sm"
             variant="ghost"
             leftIcon={Trash2}
-            onPress={archive}
+            onPress={requestArchive}
             disabled={!enabled || !query.data || archiveState.pending}
             loading={archiveState.pending}
             accessibilityLabel="Move page to Trash"
@@ -525,7 +523,17 @@ function WikiReader({
           </Button>
         </View>
       </View>
-      {archiveState.error && <Text style={styles.error}>{archiveState.error}</Text>}
+      <ConfirmationSheet
+        visible={archiveTarget !== null}
+        title={`Move “${archiveTarget?.title ?? "this article"}” to Trash?`}
+        message="The article and its history can be restored at any time. Subpages remain available at Wiki home. Links to this article will become available again when it is restored."
+        confirmLabel="Move to Trash"
+        pending={archiveState.pending}
+        error={archiveState.error}
+        onConfirm={archive}
+        onCancel={cancelArchive}
+        testID="wiki-trash-confirmation"
+      />
       <WikiBreadcrumbs id={id} pages={pages} onOpen={onOpen} onHome={onBack} />
       {history && query.data && client && enabled && (
         <WikiHistory

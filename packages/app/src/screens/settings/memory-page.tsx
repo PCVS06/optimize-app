@@ -12,6 +12,7 @@ import type { MemoryRecord } from "@getpaseo/protocol/optimize-memory";
 import { useHostRuntimeClient, useHostRuntimeIsConnected } from "@/runtime/host-runtime";
 import { useHostFeature } from "@/runtime/host-features";
 import { Button } from "@/components/ui/button";
+import { ConfirmationSheet } from "@/components/confirmation-sheet";
 import { Field, FormTextInput } from "@/components/ui/form-field";
 import { SelectField } from "@/components/ui/select-field";
 import { confirmDialog } from "@/utils/confirm-dialog";
@@ -44,6 +45,8 @@ function MemoryWorkspace({ serverId, online }: { serverId: string; online: boole
   const [recovered, setRecovered] = useState<MemoryDraft | null>(null);
   const [restoring, setRestoring] = useState<MemoryDraft | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [removalTarget, setRemovalTarget] = useState<MemoryRecord | null>(null);
+  const [removalError, setRemovalError] = useState<string | null>(null);
   const projectId = scope === "company" ? null : scope;
   useEffect(() => {
     let active = true;
@@ -138,36 +141,37 @@ function MemoryWorkspace({ serverId, online }: { serverId: string; online: boole
   const discardPress = useCallback(() => {
     void discard();
   }, [discard]);
-  const remove = useCallback(
-    async (record: MemoryRecord) => {
-      if (
-        !client ||
-        !(await confirmDialog({
-          title: "Forget this memory?",
-          message: `“${record.title}” will no longer be supplied as remembered context. Its original conversation and source remain.`,
-          confirmLabel: "Forget",
-          cancelLabel: "Cancel",
-          destructive: true,
-        }))
-      )
-        return;
-      setRemoving(record.id);
-      setError(null);
-      try {
-        const response = await client.removeMemory({
-          id: record.id,
-          expectedRevision: record.revision,
-        });
-        if (!response.ok) throw new Error(response.error);
-        await refetchRecords();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Memory could not be removed.");
-      } finally {
-        setRemoving(null);
-      }
-    },
-    [client, refetchRecords],
-  );
+  const remove = useCallback((record: MemoryRecord) => {
+    setRemovalTarget(record);
+    setRemovalError(null);
+  }, []);
+  const cancelRemoval = useCallback(() => {
+    if (removing !== null) return;
+    setRemovalTarget(null);
+    setRemovalError(null);
+  }, [removing]);
+  const confirmRemoval = useCallback(async () => {
+    if (!removalTarget || removing !== null) return;
+    if (!client || !online) {
+      setRemovalError("Connect to Optimize to forget this memory.");
+      return;
+    }
+    setRemoving(removalTarget.id);
+    setRemovalError(null);
+    try {
+      const response = await client.removeMemory({
+        id: removalTarget.id,
+        expectedRevision: removalTarget.revision,
+      });
+      if (!response.ok) throw new Error(response.error);
+      setRemovalTarget(null);
+      await refetchRecords();
+    } catch (err) {
+      setRemovalError(err instanceof Error ? err.message : "Memory could not be removed.");
+    } finally {
+      setRemoving(null);
+    }
+  }, [client, online, removalTarget, removing, refetchRecords]);
   const options = useMemo(
     () => [
       { id: "company", value: "company", label: "Company — all chats" },
@@ -187,6 +191,17 @@ function MemoryWorkspace({ serverId, online }: { serverId: string; online: boole
   );
   return (
     <View style={styles.page}>
+      <ConfirmationSheet
+        visible={removalTarget !== null}
+        title="Forget this memory?"
+        message={`“${removalTarget?.title ?? ""}” will no longer be supplied as remembered context. Its original conversation and source remain.`}
+        confirmLabel="Forget"
+        pending={removing !== null}
+        error={removalError}
+        onConfirm={confirmRemoval}
+        onCancel={cancelRemoval}
+        testID="memory-forget-confirmation"
+      />
       <SelectField
         label="Where this memory applies"
         value={scope}
@@ -295,7 +310,7 @@ function MemoryResults({
   removing: string | null;
   hasDraft: boolean;
   onEdit: (record: MemoryRecord) => void;
-  onRemove: (record: MemoryRecord) => Promise<void>;
+  onRemove: (record: MemoryRecord) => void;
   onPrevious: () => void;
   onNext: () => void;
 }) {
@@ -354,7 +369,7 @@ function MemoryRow({
 }: {
   record: MemoryRecord;
   onEdit: (record: MemoryRecord) => void;
-  onRemove: (record: MemoryRecord) => Promise<void>;
+  onRemove: (record: MemoryRecord) => void;
   disabled: boolean;
   removing: boolean;
 }) {
