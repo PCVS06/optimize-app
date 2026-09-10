@@ -11,7 +11,8 @@ import { settingsStyles } from "@/styles/settings";
 import { openExternalUrl } from "@/utils/open-external-url";
 import { shouldUseDesktopDaemon } from "@/desktop/daemon/desktop-daemon";
 
-const CLI_DOCS_URL = "https://paseo.sh/docs/cli";
+const CLI_DOCS_URL =
+  "https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/branding/HELP.md";
 
 export function IntegrationsSection() {
   const { t } = useTranslation();

@@ -946,7 +946,7 @@ function mapExtensionUiRequestToPermission(
   options: ExtensionUiMappingOptions = {},
 ): AgentPermissionRequest | null {
   const provider = options.provider ?? PI_PROVIDER;
-  const label = options.label ?? "Pi";
+  const label = options.label ?? "Optimize";
   switch (event.method) {
     case "select": {
       const selectOptions = readStringArray(event.options);
@@ -2060,7 +2060,7 @@ export class PiRpcAgentSession implements AgentSession {
       this.activeAskUserDialog.allowMultiple === false;
     const request = mapExtensionUiRequestToPermission(event, {
       provider: this.provider,
-      label: "Pi",
+      label: "Optimize",
       combineOptionalComment: shouldCombineOptionalComment,
       allowFreeform: this.activeAskUserDialog?.allowFreeform,
     });

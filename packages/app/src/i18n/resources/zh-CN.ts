@@ -2,6 +2,12 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const zhCN: TranslationResources = {
+  optimize: {
+    website: "Optimize 网站",
+    licenses: "许可证",
+    licensesTitle: "开源许可证",
+    licensesDescription: "Optimize 使用开源组件。应用中保留了版权和许可证声明。",
+  },
   common: {
     back: "返回",
     loading: "加载中...",

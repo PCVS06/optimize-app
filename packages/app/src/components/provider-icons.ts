@@ -1,7 +1,7 @@
 import { Bot } from "lucide-react-native";
 import { createElement, type ComponentType } from "react";
 import { SvgXml } from "react-native-svg";
-import { PiIcon } from "@/components/icons/pi-icon";
+import { OptimizeLogo } from "@/components/icons/optimize-logo";
 import { ACP_PROVIDER_CATALOG } from "@/data/acp-provider-catalog";
 import { resolveProviderIconName } from "@/components/provider-icon-name";
 
@@ -13,7 +13,7 @@ export interface ProviderIconProps {
 export type ProviderIconComponent = ComponentType<ProviderIconProps>;
 
 const BUILTIN_PROVIDER_ICONS: Record<string, ProviderIconComponent> = {
-  pi: PiIcon,
+  pi: OptimizeLogo,
 };
 
 const CATALOG_ICON_SVGS = new Map(

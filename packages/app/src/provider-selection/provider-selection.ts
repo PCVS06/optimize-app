@@ -9,6 +9,7 @@ import type { DraftCommandConfig } from "@/hooks/use-agent-commands-query";
 import { i18n } from "@/i18n/i18next";
 import { compareMatchScores, scoreTextFields } from "@getpaseo/protocol/search/text-match";
 import { filterSelectableModels } from "./model-catalog";
+import { resolveProviderLabel } from "@/utils/provider-definitions";
 
 export interface ProviderSelectionModelRow {
   /**
@@ -65,7 +66,7 @@ function buildModelRows(
     providerLabel,
     modelId: model.id,
     modelLabel: model.label,
-    description: model.description ?? model.id,
+    description: provider === "pi" ? undefined : (model.description ?? model.id),
     isDefault: model.isDefault,
   }));
 }
@@ -146,7 +147,7 @@ export function buildSelectableProviderSelectorProviders(
   return (entries ?? [])
     .filter((entry) => entry.enabled)
     .map((entry) => {
-      const label = entry.label ?? entry.provider;
+      const label = resolveProviderLabel(entry.provider, entries);
       return {
         id: entry.provider,
         label,

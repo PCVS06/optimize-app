@@ -12,7 +12,7 @@ import { KNOWN_PROVIDER_ICON_NAMES } from "./provider-icon-names.js";
 export const PROMPT_SENTINEL = "{{{prompt}}}";
 
 export const DEFAULT_TERMINAL_PROFILES: readonly TerminalProfile[] = [
-  { id: "pi", name: "Pi", command: "pi", args: [PROMPT_SENTINEL], icon: "pi" },
+  { id: "pi", name: "Optimize", command: "pi", args: [PROMPT_SENTINEL], icon: "pi" },
 ];
 
 export interface SubstitutableCommand {

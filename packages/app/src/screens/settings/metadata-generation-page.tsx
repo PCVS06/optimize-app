@@ -13,7 +13,8 @@ import { buildSelectableProviderSelectorProviders } from "@/provider-selection/p
 import { SettingsSection } from "@/components/settings/headings/settings-section";
 import { settingsStyles } from "@/styles/settings";
 
-const METADATA_GENERATION_DOCS_URL = "https://paseo.sh/docs/metadata-generation";
+const METADATA_GENERATION_DOCS_URL =
+  "https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/branding/HELP.md";
 type SelectionMode = "automatic" | "preferred";
 
 export function MetadataGenerationPage({ serverId }: { serverId: string }) {

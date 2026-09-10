@@ -26,7 +26,7 @@ export function buildProviderDefinitions(
 
   return snapshotEntries.map((entry) => ({
     id: entry.provider,
-    label: entry.label ?? entry.provider,
+    label: resolveProviderLabel(entry.provider, snapshotEntries),
     description: entry.description ?? "",
     defaultModeId: entry.defaultModeId ?? null,
     modes: buildProviderModes(entry),
@@ -37,6 +37,7 @@ export function resolveProviderLabel(
   provider: string,
   snapshotEntries: ProviderSnapshotEntry[] | undefined,
 ): string {
+  if (provider === "pi") return "Optimize";
   return snapshotEntries?.find((entry) => entry.provider === provider)?.label ?? provider;
 }
 

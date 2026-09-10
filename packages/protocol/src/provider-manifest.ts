@@ -90,8 +90,8 @@ const MOCK_SLOW_MODES: AgentProviderModeDefinition[] = [
 export const AGENT_PROVIDER_DEFINITIONS: AgentProviderDefinition[] = [
   {
     id: "pi",
-    label: "Pi",
-    description: "Optimize's agent, powered by Pi with your models and extensions",
+    label: "Optimize",
+    description: "Your Optimize assistant, with connected models and workspace tools",
     defaultModeId: null,
     modes: [],
   },

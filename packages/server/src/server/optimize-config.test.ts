@@ -1,6 +1,6 @@
 import { DEFAULT_TERMINAL_PROFILES } from "@getpaseo/protocol/terminal-profiles";
 import { afterEach, describe, expect, test } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { resolveConfigFromPersisted } from "./config.js";
@@ -23,6 +23,26 @@ describe("Optimize defaults", () => {
     expect(config.listen).toBe("127.0.0.1:6771");
     expect(config.appendSystemPrompt).toBe(OPTIMIZE_SYSTEM_PROMPT);
     expect(DEFAULT_TERMINAL_PROFILES.map((profile) => profile.id)).toEqual(["pi"]);
+  });
+
+  test("updates the original company identity while preserving employee edits", () => {
+    const initialPrompt = readFileSync(
+      new URL("./test-fixtures/initial-optimize-system-prompt.txt", import.meta.url),
+      "utf8",
+    ).trim();
+    const config = resolveConfigFromPersisted(
+      createHome(),
+      { daemon: { appendSystemPrompt: initialPrompt } },
+      { env: {} },
+    );
+    expect(config.appendSystemPrompt).toBe(OPTIMIZE_SYSTEM_PROMPT);
+    const customPrompt = initialPrompt + "\nUse our support playbook.";
+    const customized = resolveConfigFromPersisted(
+      createHome(),
+      { daemon: { appendSystemPrompt: customPrompt } },
+      { env: {} },
+    );
+    expect(customized.appendSystemPrompt).toBe(customPrompt);
   });
 
   test("honors the employee's configured endpoint and system prompt", () => {

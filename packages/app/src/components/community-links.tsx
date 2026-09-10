@@ -1,66 +1,84 @@
-import { useCallback } from "react";
-import { View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { StyleSheet } from "react-native-unistyles";
-import { Heart } from "lucide-react-native";
+import { Globe, FileText } from "lucide-react-native";
+import { AdaptiveModalSheet } from "@/components/adaptive-modal-sheet";
 import { Button } from "@/components/ui/button";
-import { GitHubIcon } from "@/components/icons/github-icon";
-import { DiscordIcon } from "@/components/icons/discord-icon";
 import { openExternalUrl } from "@/utils/open-external-url";
 
-const renderGitHubIcon = (color: string) => <GitHubIcon color={color} size={14} />;
-const renderDiscordIcon = (color: string) => <DiscordIcon color={color} size={14} />;
+const LICENSE_LINKS = [
+  {
+    label: "Paseo — Apache-2.0 · © Mohamed Boudra",
+    url: "https://github.com/getpaseo/paseo/blob/v0.8.0/LICENSE",
+  },
+  {
+    label: "Pi — MIT · © Mario Zechner",
+    url: "https://github.com/badlogic/pi-mono/blob/main/LICENSE",
+  },
+  {
+    label: "Jost — SIL Open Font License",
+    url: "https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/packages/app/public/fonts/OFL-Jost.txt",
+  },
+];
+const LICENSE_SNAP_POINTS = ["60%"];
 
 export function CommunityLinks() {
-  const handleOpenGitHub = useCallback(() => {
-    void openExternalUrl("https://github.com/getpaseo/paseo");
+  const { t } = useTranslation();
+  const [licensesOpen, setLicensesOpen] = useState(false);
+  const header = useMemo(() => ({ title: t("optimize.licensesTitle") }), [t]);
+  const openWebsite = useCallback(() => {
+    void openExternalUrl("https://www.optimize.bike/");
   }, []);
-
-  const handleOpenSponsor = useCallback(() => {
-    void openExternalUrl("https://github.com/sponsors/boudra");
-  }, []);
-
-  const handleOpenDiscord = useCallback(() => {
-    void openExternalUrl("https://discord.gg/jz8T2uahpH");
-  }, []);
-
+  const openLicenses = useCallback(() => setLicensesOpen(true), []);
+  const closeLicenses = useCallback(() => setLicensesOpen(false), []);
   return (
-    <View style={styles.row}>
-      <Button
-        variant="ghost"
-        size="sm"
-        leftIcon={renderGitHubIcon}
-        onPress={handleOpenGitHub}
-        testID="community-links-github-star"
+    <>
+      <View style={styles.row}>
+        <Button variant="ghost" size="sm" leftIcon={Globe} onPress={openWebsite}>
+          {t("optimize.website")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={FileText}
+          onPress={openLicenses}
+          testID="optimize-licenses"
+        >
+          {t("optimize.licenses")}
+        </Button>
+      </View>
+      <AdaptiveModalSheet
+        header={header}
+        visible={licensesOpen}
+        onClose={closeLicenses}
+        desktopMaxWidth={560}
+        snapPoints={LICENSE_SNAP_POINTS}
+        testID="optimize-licenses-sheet"
       >
-        Star
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        leftIcon={Heart}
-        onPress={handleOpenSponsor}
-        testID="community-links-sponsor"
-      >
-        Sponsor
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        leftIcon={renderDiscordIcon}
-        onPress={handleOpenDiscord}
-        testID="community-links-discord"
-      >
-        Community
-      </Button>
-    </View>
+        <ScrollView contentContainerStyle={styles.licenses}>
+          <Text style={styles.description}>{t("optimize.licensesDescription")}</Text>
+          {LICENSE_LINKS.map((license) => (
+            <LicenseLink key={license.label} license={license} />
+          ))}
+        </ScrollView>
+      </AdaptiveModalSheet>
+    </>
+  );
+}
+function LicenseLink({ license }: { license: (typeof LICENSE_LINKS)[number] }) {
+  const open = useCallback(() => {
+    void openExternalUrl(license.url);
+  }, [license.url]);
+  return (
+    <Button variant="ghost" size="sm" onPress={open}>
+      {license.label}
+    </Button>
   );
 }
 
-const styles = StyleSheet.create(() => ({
-  row: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 0,
-  },
+const styles = StyleSheet.create((theme) => ({
+  row: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  licenses: { gap: theme.spacing[4], paddingBottom: theme.spacing[6] },
+  description: { color: theme.colors.foregroundMuted, fontSize: theme.fontSize.base },
 }));

@@ -48,7 +48,7 @@ jobs:
         run: npx vitest run src/agent-deep-link.test.ts --bail=1
       - name: Verify appearance
         working-directory: packages/app
-        run: npx vitest run src/styles/theme.test.ts --project=unit --bail=1
+        run: npx vitest run src/styles/theme.test.ts src/provider-selection/provider-selection.test.ts src/components/provider-icons.test.ts src/i18n/resources.test.ts --project=unit --bail=1
       - name: Bundle and package the Optimize app
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

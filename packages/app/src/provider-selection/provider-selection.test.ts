@@ -36,6 +36,39 @@ describe("combined model selector data", () => {
     };
   }
 
+  it("shows Optimize branding without changing the selected Pi model identity", () => {
+    const [provider] = buildSelectableProviderSelectorProviders([
+      snapshotEntry({
+        provider: "pi",
+        label: "Pi",
+        models: [
+          {
+            provider: "pi",
+            id: "openai-codex/gpt-5.5",
+            label: "GPT-5.5",
+            description: "openai-codex/gpt-5.5",
+          },
+        ],
+      }),
+    ]);
+    expect(provider).toMatchObject({
+      id: "pi",
+      label: "Optimize",
+      modelSelection: {
+        kind: "models",
+        rows: [
+          {
+            provider: "pi",
+            providerLabel: "Optimize",
+            modelId: "openai-codex/gpt-5.5",
+            modelLabel: "GPT-5.5",
+            description: undefined,
+          },
+        ],
+      },
+    });
+  });
+
   it("builds selector providers from ready enabled snapshot entries", () => {
     expect(
       buildSelectableProviderSelectorProviders([

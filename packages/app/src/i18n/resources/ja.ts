@@ -2,6 +2,13 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ja: TranslationResources = {
+  optimize: {
+    website: "Optimize のウェブサイト",
+    licenses: "ライセンス",
+    licensesTitle: "オープンソースライセンス",
+    licensesDescription:
+      "Optimize はオープンソースのコンポーネントを使用しています。著作権とライセンスの表示はアプリに保持されています。",
+  },
   common: {
     back: "戻る",
     loading: "読み込み中...",

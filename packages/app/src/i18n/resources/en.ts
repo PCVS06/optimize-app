@@ -1,4 +1,11 @@
 export const en = {
+  optimize: {
+    website: "Optimize website",
+    licenses: "Licenses",
+    licensesTitle: "Open-source licenses",
+    licensesDescription:
+      "Optimize uses open-source components. Copyright and license notices are preserved with the app.",
+  },
   common: {
     back: "Back",
     loading: "Loading...",
@@ -1450,11 +1457,11 @@ export const en = {
       },
       importSession: {
         title: "Import session",
-        description: "Open a Pi session you started in a terminal",
+        description: "Continue an existing assistant conversation",
       },
       setupProviders: {
         title: "Setup providers",
-        description: "Configure Pi and your available models",
+        description: "Configure your assistant and available models",
       },
       pairDevice: {
         title: "Pair device",
@@ -2497,7 +2504,7 @@ export const en = {
         editProfile: "Edit profile",
         addProfileTitle: "Add terminal profile",
         editProfileTitle: "Edit terminal profile",
-        namePlaceholder: "Pi",
+        namePlaceholder: "Optimize",
         commandPlaceholder: "claude",
         argsPlaceholder: "--dangerously-skip-permissions",
         nameLabel: "Name",

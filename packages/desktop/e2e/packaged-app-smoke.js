@@ -905,7 +905,12 @@ async function smokePackagedDesktopApp({ appPath }) {
       args: ["provider", "ls"],
       label: "Optimize Pi provider discovery",
     });
-    if (!Array.isArray(providers) || providers.length !== 1 || providers[0].provider !== "pi") {
+    if (
+      !Array.isArray(providers) ||
+      providers.length !== 1 ||
+      providers[0].provider !== "pi" ||
+      providers[0].label !== "Optimize"
+    ) {
       throw new Error(`Optimize must expose only Pi: ${JSON.stringify(providers)}`);
     }
     const artifactDir = process.env.PASEO_DESKTOP_SMOKE_ARTIFACT_DIR?.trim();

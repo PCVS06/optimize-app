@@ -1,4 +1,4 @@
-import { OPTIMIZE_SYSTEM_PROMPT } from "./optimize-system-prompt.js";
+import { resolveOptimizeSystemPrompt } from "./optimize-system-prompt.js";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -501,7 +501,7 @@ function resolveWorktreesRoot(
 }
 
 function resolveAppendSystemPrompt(persisted: ReturnType<typeof loadPersistedConfig>): string {
-  return persisted.daemon?.appendSystemPrompt ?? OPTIMIZE_SYSTEM_PROMPT;
+  return resolveOptimizeSystemPrompt(persisted.daemon?.appendSystemPrompt);
 }
 
 function resolveBrowserToolsEnabled(persisted: ReturnType<typeof loadPersistedConfig>): boolean {

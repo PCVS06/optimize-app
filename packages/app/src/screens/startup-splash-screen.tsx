@@ -30,7 +30,8 @@ interface StartupSplashScreenProps {
 }
 
 const GITHUB_ISSUE_URL = "https://github.com/PCVS06/optimize-app/issues/new";
-const DOCS_URL = "https://paseo.sh/docs";
+const DOCS_URL =
+  "https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/branding/HELP.md";
 
 const LOGO_SIZE = 96;
 const SHIMMER_PEAK_WIDTH = 120;

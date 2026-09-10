@@ -25,7 +25,8 @@ import {
   type ChangelogSection,
 } from "./parse-changelog";
 
-const WEBSITE_CHANGELOG_URL = "https://paseo.sh/changelog";
+const WEBSITE_CHANGELOG_URL =
+  "https://github.com/PCVS06/optimize-app/blob/optimize/initial-build/branding/CHANGELOG.md";
 
 const ThemedGift = withUnistyles(Gift);
 const ThemedExternalLink = withUnistyles(ExternalLink);

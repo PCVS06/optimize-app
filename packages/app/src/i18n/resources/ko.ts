@@ -2,6 +2,13 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ko: TranslationResources = {
+  optimize: {
+    website: "Optimize 웹사이트",
+    licenses: "라이선스",
+    licensesTitle: "오픈 소스 라이선스",
+    licensesDescription:
+      "Optimize는 오픈 소스 구성 요소를 사용합니다. 저작권 및 라이선스 고지는 앱에 보존됩니다.",
+  },
   common: {
     back: "뒤로",
     loading: "불러오는 중...",

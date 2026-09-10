@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
-import { Activity, CircleHelp, Gift, Keyboard } from "lucide-react-native";
+import { Activity, CircleHelp, Gift, Keyboard, Globe } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, withUnistyles } from "react-native-unistyles";
-import { DiscordIcon } from "@/components/icons/discord-icon";
 import { GitHubIcon } from "@/components/icons/github-icon";
 import {
   DropdownMenu,
@@ -27,13 +26,13 @@ import { resolveAppVersion } from "@/utils/app-version";
 import { openChangelog } from "@/changelog";
 import { openExternalUrl } from "@/utils/open-external-url";
 
-const DISCORD_URL = "https://discord.gg/jz8T2uahpH";
+const COMPANY_URL = "https://www.optimize.bike/";
 const GITHUB_ISSUE_URL = "https://github.com/PCVS06/optimize-app/issues/new";
 const ThemedActivity = withUnistyles(Activity);
 const ThemedCircleHelp = withUnistyles(CircleHelp);
 const ThemedGift = withUnistyles(Gift);
 const ThemedKeyboard = withUnistyles(Keyboard);
-const ThemedDiscordIcon = withUnistyles(DiscordIcon);
+const ThemedGlobe = withUnistyles(Globe);
 const ThemedGitHubIcon = withUnistyles(GitHubIcon);
 const foregroundColorMapping = (theme: Theme) => ({ color: theme.colors.foreground });
 const foregroundMutedColorMapping = (theme: Theme) => ({
@@ -45,8 +44,8 @@ const diagnosticLeadingIcon = (
 const shortcutsLeadingIcon = (
   <ThemedKeyboard size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
 );
-const discordLeadingIcon = (
-  <ThemedDiscordIcon size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
+const websiteLeadingIcon = (
+  <ThemedGlobe size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
 );
 const githubLeadingIcon = (
   <ThemedGitHubIcon size={ICON_SIZE.sm} uniProps={foregroundMutedColorMapping} />
@@ -89,8 +88,8 @@ export function SidebarHelpMenu() {
     setShortcutsDialogOpen(true);
   }, [setShortcutsDialogOpen]);
 
-  const openDiscord = useCallback(() => {
-    void openExternalUrl(DISCORD_URL);
+  const openCompanyWebsite = useCallback(() => {
+    void openExternalUrl(COMPANY_URL);
   }, []);
 
   const openGitHubIssue = useCallback(() => {
@@ -149,11 +148,11 @@ export function SidebarHelpMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{t("sidebar.help.reportIssue")}</DropdownMenuLabel>
         <DropdownMenuItem
-          testID="sidebar-help-discord"
-          leading={discordLeadingIcon}
-          onSelect={openDiscord}
+          testID="sidebar-help-website"
+          leading={websiteLeadingIcon}
+          onSelect={openCompanyWebsite}
         >
-          {t("sidebar.help.discord")}
+          {t("optimize.website")}
         </DropdownMenuItem>
         <DropdownMenuItem
           testID="sidebar-help-github"

@@ -1,3 +1,4 @@
+import { OptimizeLogo } from "@/components/icons/optimize-logo";
 import { Bot } from "lucide-react-native";
 import { SvgXml } from "react-native-svg";
 import { describe, expect, it } from "vitest";
@@ -13,6 +14,9 @@ function renderIcon(Component: ProviderIconComponent) {
 }
 
 describe("getProviderIcon", () => {
+  it("uses the company emblem for the Pi runtime", () => {
+    expect(getProviderIcon("pi")).toBe(OptimizeLogo);
+  });
   it("renders registered snapshot SVG metadata with the requested size and color", () => {
     const svg = '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" /></svg>';
     replaceProviderSnapshotIcons("server-1", [{ provider: "rendered-provider", iconSvg: svg }]);

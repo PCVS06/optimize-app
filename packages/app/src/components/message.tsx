@@ -62,6 +62,8 @@ import type { AgentAttachment } from "@getpaseo/protocol/messages";
 import type { ToolCallDetail } from "@getpaseo/protocol/agent-types";
 import { buildToolCallPresentation } from "@/tool-calls/presentation";
 import { resolveToolCallIcon } from "@/utils/tool-call-icon";
+import { OptimizeLogo } from "@/components/icons/optimize-logo";
+import { OptimizeThinkingIndicator } from "@/components/optimize-thinking-indicator";
 import { getMarkdownListMarker, getMarkdownListSpacing } from "@/utils/markdown-list";
 import { markdownNodeContainsType } from "@/utils/markdown-ast";
 import { useStableEvent } from "@/hooks/use-stable-event";
@@ -3165,12 +3167,18 @@ export const ToolCall = memo(function ToolCall({
     );
   }
 
+  let badgeIcon = presentation.icon;
+  if (toolName === "thinking") {
+    badgeIcon =
+      status === "running" || status === "executing" ? OptimizeThinkingIndicator : OptimizeLogo;
+  }
+
   return (
     <ExpandableBadge
       testID="tool-call-badge"
       label={presentation.displayName}
       secondaryLabel={presentation.summary}
-      icon={presentation.icon}
+      icon={badgeIcon}
       isExpanded={shouldRenderInline && isExpanded}
       onToggle={presentation.canOpenDetails ? handleToggle : undefined}
       onOpenFile={handleOpenFile}

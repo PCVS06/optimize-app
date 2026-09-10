@@ -2,6 +2,8 @@
 
 Optimize is a company-branded fork of [Paseo](https://github.com/getpaseo/paseo), based on **v0.8.0** (`b8e24677e12b226c7c38c1c3a40649daa9f1152f`). It keeps Paseo's workspace, conversation, file, terminal, voice, scheduling, plugin, and remote-connection features, with **Pi as its only production agent runtime**.
 
+The everyday interface uses Optimize labels and the company emblem, including its animated thinking indicator. Technical runtime IDs remain internal; **About → Licenses** retains open-source attribution. See the [staff guide](branding/HELP.md).
+
 This first build establishes the full app before choosing which other features to simplify. Shopify, Gorgias, team identity, and company documents are not connected yet.
 
 - Company mark and colors come from [optimize.bike](https://www.optimize.bike/). Original source: [branding/optimize-logo.svg](branding/optimize-logo.svg). Jost is bundled with its SIL Open Font License.

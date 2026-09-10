@@ -2,6 +2,13 @@ import { en, type TranslationResources } from "./en";
 import { pluginSettings } from "./plugin-settings";
 
 export const ar: TranslationResources = {
+  optimize: {
+    website: "موقع Optimize",
+    licenses: "التراخيص",
+    licensesTitle: "تراخيص المصادر المفتوحة",
+    licensesDescription:
+      "يستخدم Optimize مكونات مفتوحة المصدر. تُحفظ إشعارات حقوق النشر والتراخيص مع التطبيق.",
+  },
   common: {
     back: "خلف",
     loading: "تحميل...",

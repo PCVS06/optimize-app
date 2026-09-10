@@ -459,7 +459,7 @@ describe("PiRpcAgentSession", () => {
     const permission = await events.nextPermissionRequest();
     expect(permission.request).toMatchObject({
       id: "select-1",
-      name: "Pi ask_user",
+      name: "Optimize ask_user",
       kind: "question",
       title: "Pick one",
       input: {
