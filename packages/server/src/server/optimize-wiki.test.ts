@@ -197,3 +197,15 @@ test("indexes article links and hierarchy and prevents cyclic page moves", async
   expect(saved.parentId).toBe(root.id);
   expect((await wiki.index()).find((entry) => entry.id === child.id)?.links).toEqual([]);
 });
+
+test("finds readable product identifiers escaped by the visual Markdown editor", async () => {
+  const page = await wiki.write({
+    title: "Product",
+    body: "## Care\nSKU\\_OPT\\_718 and \\[reference\\]",
+    expectedRevision: null,
+  });
+  const result = await wiki.search({ query: "SKU_OPT_718" });
+  expect(result.pages.map((entry) => entry.id)).toEqual([page.id]);
+  expect(result.pages[0]?.excerpt).toContain("SKU_OPT_718");
+  expect((await wiki.read(page.id)).body).toBe(page.body);
+});

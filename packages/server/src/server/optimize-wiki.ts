@@ -153,14 +153,15 @@ export class OptimizeWikiStore {
         continue;
       const page = await this.read(file.slice(0, -5));
       const title = page.title.toLocaleLowerCase();
-      const body = page.body.toLocaleLowerCase();
+      const searchableBody = page.body.replace(/\\([!-/:-@[-`{-~])/g, "$1");
+      const body = searchableBody.toLocaleLowerCase();
       if (!terms.every((term) => title.includes(term) || body.includes(term))) continue;
       const position = terms.length ? Math.max(0, body.indexOf(terms[0]!) - 60) : 0;
       const { body: _body, ...summary } = page;
       matches.push({
         page: {
           ...summary,
-          excerpt: page.body.slice(position, position + 220).replace(/\s+/g, " "),
+          excerpt: searchableBody.slice(position, position + 220).replace(/\s+/g, " "),
         },
         score: terms.filter((term) => title.includes(term)).length,
       });
