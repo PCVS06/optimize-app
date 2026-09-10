@@ -12,7 +12,7 @@ import { BrowserToolsOptInCard } from "./browser-tools-card";
 import { HostPluginsPage } from "./plugins-page";
 import { buildProjectsSettingsRoute, buildSettingsHostSectionRoute } from "@/utils/host-routes";
 
-const sections = ["Prompts", "Context", "Agents", "Models", "Extensions"] as const;
+const sections = ["Prompts", "Context", "Agents", "Models", "Extensions", "Integrations"] as const;
 type EngineeringSection = (typeof sections)[number];
 export function EngineeringPage({
   serverId,
@@ -110,6 +110,49 @@ export function EngineeringPage({
       )}
       {section === "Models" && <HostProvidersPage serverId={serverId} />}
       {section === "Extensions" && <HostPluginsPage serverId={serverId} />}
+      {section === "Integrations" && (
+        <SettingsSection title="Company tools">
+          <View style={styles.card}>
+            <Text style={styles.heading}>Microsoft 365</Text>
+            <Text style={styles.description}>
+              Outlook, contacts, calendars, OneDrive, SharePoint, Teams, OneNote, tasks, and Excel
+              workbooks. Word and PowerPoint files can be downloaded, edited in their Mac apps, and
+              uploaded again.
+            </Text>
+            <Text style={styles.description}>
+              In a chat, ask “Connect Microsoft 365” or enter /microsoft. The first connection needs
+              your company’s Microsoft Entra application ID. You sign in directly with Microsoft;
+              access stays within your account’s permissions and company consent policy.
+            </Text>
+            <Text style={styles.description}>
+              Credentials are stored in this Mac’s Keychain. Use /microsoft status to check the
+              connection, /microsoft finish after sign-in, and /microsoft disconnect to remove it.
+              The assistant asks before applying Microsoft changes.
+            </Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.heading}>Computer use</Text>
+            <Text style={styles.description}>
+              The bundled Mac assistant can observe the main display, open apps, click, type, use
+              keyboard shortcuts, and scroll. Ask the assistant to operate an app or enter /computer
+              to enable it for a conversation.
+            </Text>
+            <Text style={styles.description}>
+              macOS requires Screen Recording and Accessibility for Optimize Automation. Use
+              /computer off to stop access in that conversation. The assistant operates the Mac
+              where its runtime is running.
+            </Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.heading}>Wiki authoring skill</Text>
+            <Text style={styles.description}>
+              Built into the Mac app. The assistant uses article structures, source rules, overview
+              pages, durable links, and conflict-aware publication. Ask it to create or update an
+              article; drafts requested in chat stay unpublished.
+            </Text>
+          </View>
+        </SettingsSection>
+      )}
     </View>
   );
 }

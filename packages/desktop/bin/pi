@@ -9,4 +9,4 @@ for argument in "$@"; do
     exit 1
   fi
 done
-exec env ELECTRON_RUN_AS_NODE=1 PATH="${BIN_DIR}:${PATH:-/usr/bin:/bin}" "${HELPER}" "${RESOURCES_DIR}/pi-runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js" "$@"
+exec env ELECTRON_RUN_AS_NODE=1 PATH="${BIN_DIR}:${PATH:-/usr/bin:/bin}" "${HELPER}" "${RESOURCES_DIR}/pi-runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js" --extension "${RESOURCES_DIR}/pi-runtime/extensions/optimize.mjs" --skill "${RESOURCES_DIR}/pi-runtime/skills" "$@"

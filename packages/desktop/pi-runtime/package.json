@@ -5,6 +5,7 @@
   "description": "Pi and package tooling shipped inside Optimize",
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.84.2",
+    "@modelcontextprotocol/sdk": "1.29.0",
     "npm": "11.6.2"
   }
 }

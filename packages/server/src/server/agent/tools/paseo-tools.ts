@@ -1,5 +1,9 @@
 import { getOptimizeWikiStore } from "../../optimize-wiki.js";
-import { WikiSearchInputSchema, WikiPageIdSchema } from "@getpaseo/protocol/optimize-wiki";
+import {
+  WikiSearchInputSchema,
+  WikiPageIdSchema,
+  WikiWriteInputSchema,
+} from "@getpaseo/protocol/optimize-wiki";
 import { z } from "zod";
 import { ensureValidJson } from "../../json-utils.js";
 import type { Logger } from "pino";
@@ -635,6 +639,60 @@ export function createPaseoToolCatalog(options: PaseoToolHostDependencies): Pase
       },
       async (input) => ({
         content: [{ type: "text", text: JSON.stringify(await wiki.read(input.id)) }],
+      }),
+    );
+  }
+
+  if (options.paseoHome && !options.voiceOnly) {
+    const wiki = getOptimizeWikiStore(options.paseoHome);
+    registerTool(
+      "optimize_wiki_index",
+      {
+        title: "Map Optimize Wiki",
+        description:
+          "List current article IDs, titles, hierarchy and links. Use before reorganizing or linking articles.",
+        inputSchema: z.object({}),
+      },
+      async () => ({ content: [{ type: "text", text: JSON.stringify(await wiki.index()) }] }),
+    );
+    registerTool(
+      "optimize_wiki_write",
+      {
+        title: "Publish Optimize Wiki article",
+        description:
+          "Publish a new article or update a current article. Read the optimize-wiki skill first. Set expectedRevision to null for a new page, or to the revision just read when updating. Conflicts require rereading and merging, never a blind retry. Saves a published revision visible to staff and AI; local UI drafts are separate.",
+        inputSchema: WikiWriteInputSchema,
+      },
+      async (input) => ({
+        content: [{ type: "text", text: JSON.stringify(await wiki.write(input)) }],
+      }),
+    );
+    registerTool(
+      "optimize_wiki_history",
+      {
+        title: "List Wiki article versions",
+        description:
+          "List historical versions for an explicit history or restoration request. These are not current knowledge.",
+        inputSchema: z.object({ id: WikiPageIdSchema, offset: z.number().int().min(0).optional() }),
+      },
+      async (input) => ({
+        content: [
+          { type: "text", text: JSON.stringify(await wiki.history(input.id, input.offset)) },
+        ],
+      }),
+    );
+    registerTool(
+      "optimize_wiki_revision",
+      {
+        title: "Read a Wiki article version",
+        description:
+          "Read a historical version for comparison or restoration. Restore through optimize_wiki_write using the current revision, preserving history.",
+        inputSchema: z.object({ id: WikiPageIdSchema, revision: WikiPageIdSchema }),
+      },
+      async (input) => ({
+        content: [
+          { type: "text", text: JSON.stringify(await wiki.readRevision(input.id, input.revision)) },
+        ],
       }),
     );
   }

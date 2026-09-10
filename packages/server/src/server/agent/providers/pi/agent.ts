@@ -767,6 +767,7 @@ function combineCleanup(cleanups: Array<(() => void) | undefined>): (() => void)
 }
 
 function isPiMcpAdapterCommand(command: PiRpcSlashCommand): boolean {
+  if (command.source === "extension" && command.name === "optimize-tools") return true;
   if (command.source !== "extension" || !/^mcp(?::\d+)?$/.test(command.name)) {
     return false;
   }

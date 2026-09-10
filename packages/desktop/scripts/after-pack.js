@@ -126,6 +126,9 @@ function copyEmbeddedPi(appOutDir) {
   // matcher excludes node_modules; this copy runs before signing the app.
   fs.mkdirSync(destination, { recursive: true });
   fs.copyFileSync(path.join(source, "package.json"), path.join(destination, "package.json"));
+  for (const directory of ["extensions", "skills", "native"]) {
+    fs.cpSync(path.join(source, directory), path.join(destination, directory), { recursive: true });
+  }
   fs.cpSync(path.join(source, "node_modules"), path.join(destination, "node_modules"), {
     recursive: true,
     verbatimSymlinks: true,

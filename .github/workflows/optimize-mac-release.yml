@@ -50,8 +50,12 @@ jobs:
           NODE
       - run: npm ci --no-audit --no-fund
       - run: npm run format:check
+      - name: Build Mac automation helper
+        run: node packages/desktop/scripts/build-automation.mjs
       - name: Install embedded Pi runtime
         run: npm ci --prefix packages/desktop/pi-runtime --omit=dev --ignore-scripts --no-audit --no-fund --workspaces=false
+      - name: Verify company connector behavior
+        run: node --test packages/desktop/pi-runtime/extensions/microsoft-api.test.mjs packages/desktop/pi-runtime/extensions/mcp.test.mjs
       - name: Build and validate source
         run: |
           npm run build:server

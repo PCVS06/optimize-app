@@ -863,7 +863,10 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   if (wikiFiles.length !== 1) throw new Error("Wiki page did not persist in daemon storage");
   const wikiFile = path.join(daemonHome, "wiki", wikiFiles[0]);
   const savedWiki = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
-  if (savedWiki.title !== "Product care guide" || !savedWiki.body.includes("WIKI_CONTEXT_718"))
+  if (
+    savedWiki.title !== "Product care guide" ||
+    !savedWiki.body.replaceAll("\\_", "_").includes("WIKI_CONTEXT_718")
+  )
     throw new Error("Saved Wiki content does not match the editor");
   await page.getByTestId("wiki-edit-page").click();
   await page.getByRole("button", { name: "Markdown source", exact: true }).click();
@@ -947,7 +950,10 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByTestId("wiki-save").click();
   await page.getByTestId("wiki-article-title").waitFor();
   const restored = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
-  if (!restored.body.includes("WIKI_CONTEXT_718") || restored.revision === savedWiki.revision)
+  if (
+    !restored.body.replaceAll("\\_", "_").includes("WIKI_CONTEXT_718") ||
+    restored.revision === savedWiki.revision
+  )
     throw new Error(
       "Restoring a Wiki revision must publish a new version with the previous content",
     );
