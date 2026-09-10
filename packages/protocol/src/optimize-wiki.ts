@@ -87,7 +87,9 @@ export const WikiIndexRequestSchema = z.object({
 });
 export const WikiIndexResponseSchema = z.object({
   type: z.literal("wiki.index.response"),
-  payload: z.discriminatedUnion("ok", [
+  // zod-aot currently emits boolean discriminators as string switch cases.
+  // Match the other Wiki responses so source and compiled validators agree.
+  payload: z.union([
     z.object({ requestId: z.string(), ok: z.literal(true), pages: z.array(WikiIndexEntrySchema) }),
     z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
   ]),

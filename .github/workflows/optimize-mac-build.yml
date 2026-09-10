@@ -32,6 +32,8 @@ jobs:
         run: |
           npm run typecheck
           npm run lint
+      - name: Verify Wiki wire validation
+        run: npx vitest run packages/protocol/src/messages.optimize-wiki.test.ts
       - name: Verify Pi runtime and isolated settings
         working-directory: packages/server
         run: >-
