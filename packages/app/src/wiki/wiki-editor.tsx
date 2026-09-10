@@ -249,7 +249,7 @@ function WikiEditorForm({
           editable={!saving}
           accessibilityLabel="Wiki page title"
           testID="wiki-title-input"
-          style={styles.title}
+          style={articleTitleStyle}
         />
         <View style={styles.editingHeader}>
           <Text style={styles.muted}>Write, format, and link your company knowledge.</Text>
@@ -266,7 +266,7 @@ function WikiEditorForm({
             editable={!saving}
             accessibilityLabel="Markdown source"
             testID="wiki-body-input"
-            style={styles.source}
+            style={articleSourceStyle}
           />
         ) : (
           <WikiRichEditor
@@ -293,6 +293,17 @@ function WikiEditorForm({
     </View>
   );
 }
+// FormTextInput splits chrome and text values; pass concrete static values rather
+// than an Unistyles proxy, whose values are resolved on native view bindings.
+const articleTitleStyle = {
+  fontSize: 34,
+  lineHeight: 44,
+  borderWidth: 0,
+  backgroundColor: "transparent",
+  paddingHorizontal: 0,
+  fontWeight: "600",
+} as const;
+const articleSourceStyle = { minHeight: 430, textAlignVertical: "top" } as const;
 const styles = StyleSheet.create((theme) => ({
   screen: { flex: 1 },
   header: {
@@ -310,14 +321,6 @@ const styles = StyleSheet.create((theme) => ({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.foregroundMuted },
   actions: { flexDirection: "row", gap: 8, alignItems: "center" },
   article: { padding: 36, gap: 18, maxWidth: 940, width: "100%", alignSelf: "center", flexGrow: 1 },
-  title: {
-    fontSize: 34,
-    lineHeight: 44,
-    borderWidth: 0,
-    backgroundColor: "transparent",
-    paddingHorizontal: 0,
-    fontWeight: "600",
-  },
   editingHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -326,7 +329,6 @@ const styles = StyleSheet.create((theme) => ({
     gap: 8,
   },
   muted: { color: theme.colors.foregroundMuted, fontSize: 12 },
-  source: { minHeight: 430, textAlignVertical: "top" },
   error: { color: theme.colors.destructive, fontSize: 13 },
   footer: { color: theme.colors.foregroundMuted, fontSize: 11, lineHeight: 18 },
   recovered: {

@@ -832,6 +832,11 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     );
   await page.getByTestId("wiki-new-page").click();
   await page.getByTestId("wiki-title-input").fill("Product care guide");
+  const titleSize = await page
+    .getByTestId("wiki-title-input")
+    .evaluate((input) => Number.parseFloat(getComputedStyle(input).fontSize));
+  if (titleSize < 30)
+    throw new Error(`Wiki article title lost its document typography: ${titleSize}px`);
   const rich = page.getByTestId("wiki-rich-content");
   await rich.click();
   await rich.pressSequentially("/heading 2");
