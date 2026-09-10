@@ -10,11 +10,19 @@ interface WikiSessionOptions {
 type WikiRequest = Extract<
   SessionInboundMessage,
   {
-    type: "wiki.index.request" | "wiki.search.request" | "wiki.read.request" | "wiki.write.request";
+    type:
+      | "wiki.history.request"
+      | "wiki.revision.request"
+      | "wiki.index.request"
+      | "wiki.search.request"
+      | "wiki.read.request"
+      | "wiki.write.request";
   }
 >;
 
 const responseTypes = {
+  "wiki.history.request": "wiki.history.response",
+  "wiki.revision.request": "wiki.revision.response",
   "wiki.index.request": "wiki.index.response",
   "wiki.search.request": "wiki.search.response",
   "wiki.read.request": "wiki.read.response",
@@ -31,6 +39,26 @@ export class OptimizeWikiSession {
     const requestId = message.requestId;
     try {
       switch (message.type) {
+        case "wiki.history.request":
+          this.options.emit({
+            type: "wiki.history.response",
+            payload: {
+              requestId,
+              ok: true,
+              ...(await this.store.history(message.id, message.offset)),
+            },
+          });
+          return;
+        case "wiki.revision.request":
+          this.options.emit({
+            type: "wiki.revision.response",
+            payload: {
+              requestId,
+              ok: true,
+              page: await this.store.readRevision(message.id, message.revision),
+            },
+          });
+          return;
         case "wiki.index.request":
           this.options.emit({
             type: "wiki.index.response",

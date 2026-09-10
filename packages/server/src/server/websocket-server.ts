@@ -1723,6 +1723,7 @@ export class VoiceAssistantWebSocketServer {
         // COMPAT(daemonSelfUpdate): added in v0.1.93, remove gate after 2026-12-13.
         optimizeWiki: true,
         optimizeWikiGraph: true,
+        optimizeWikiDocuments: true,
         daemonSelfUpdate: false, // Optimize updates the app and its runtime together.
         // COMPAT(agentForkContext): added in v0.1.102, remove gate after 2026-12-28.
         agentForkContext: true,

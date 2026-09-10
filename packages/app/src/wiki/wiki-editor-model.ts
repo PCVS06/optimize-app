@@ -16,15 +16,21 @@ interface WikiEditorState {
 interface WikiEditorOptions {
   page?: WikiPage;
   parentTitle?: string;
+  initial?: { title?: string; body?: string; parentId?: string | null };
   write: (input: WikiWriteInput) => Promise<WikiPage>;
 }
 
-export function openWikiEditor({ page, write, parentTitle = "Top level" }: WikiEditorOptions) {
+export function openWikiEditor({
+  page,
+  write,
+  parentTitle = "Top level",
+  initial,
+}: WikiEditorOptions) {
   const listeners = new Set<() => void>();
   let state: WikiEditorState = {
-    title: page?.title ?? "",
-    body: page?.body ?? "",
-    parentId: page?.parentId ?? null,
+    title: initial?.title ?? page?.title ?? "",
+    body: initial?.body ?? page?.body ?? "",
+    parentId: initial?.parentId === undefined ? (page?.parentId ?? null) : initial.parentId,
     parentTitle,
     status: "editing",
     error: null,
@@ -42,6 +48,7 @@ export function openWikiEditor({ page, write, parentTitle = "Top level" }: WikiE
         state.parentId !== (page?.parentId ?? null));
     listeners.forEach((listener) => listener());
   }
+  publish({});
   return {
     getState: () => state,
     subscribe(listener: () => void) {

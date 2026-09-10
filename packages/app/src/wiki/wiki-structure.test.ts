@@ -7,11 +7,21 @@ import {
   wikiRelations,
 } from "@getpaseo/protocol/wiki-links";
 import { wikiAncestors, wikiSections } from "./wiki-structure";
+import { wikiTreeRows, wikiExcerpt } from "./wiki-tree";
 
 const pages: WikiIndexEntry[] = [
   { id: "one", title: "Products", parentId: null, updatedAt: "", links: ["Care"] },
   { id: "two", title: "Care", parentId: "one", updatedAt: "", links: ["one"] },
 ];
+test("the page tree expands the selected article's ancestors and keeps search excerpts readable", () => {
+  expect(wikiTreeRows(pages, new Set(), null).map((row) => row.page.id)).toEqual(["one"]);
+  const visible = wikiTreeRows(pages, new Set(), "two");
+  expect(visible.map((row) => [row.page.id, row.depth])).toEqual([
+    ["one", 0],
+    ["two", 1],
+  ]);
+  expect(wikiExcerpt("## Read [[one|Products]] and **care**.")).toBe("Read Products and care.");
+});
 test("stable links survive renames, title references are unambiguous, and backlinks follow the actual direction", () => {
   expect(resolveWikiLink({ target: "products", pages })?.id).toBe("one");
   const renamed = pages.map((page) => (page.id === "one" ? { ...page, title: "Catalog" } : page));

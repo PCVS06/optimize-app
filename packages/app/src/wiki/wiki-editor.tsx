@@ -1,42 +1,113 @@
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import {
-  ScrollView,
-  Text,
-  View,
-  type NativeSyntheticEvent,
-  type TextInputSelectionChangeEventData,
-} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ScrollView, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import type { WikiPage, WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
+import { z } from "zod";
+import {
+  WikiPageSchema,
+  type WikiPage,
+  type WikiIndexEntry,
+} from "@getpaseo/protocol/optimize-wiki";
 import { Button } from "@/components/ui/button";
-import { Field, FormTextInput } from "@/components/ui/form-field";
+import { FormTextInput } from "@/components/ui/form-field";
 import { SelectField, type SelectFieldDisplay } from "@/components/ui/select-field";
-import type { EditingTextInputHandle } from "@/components/ui/text-input";
-import { useIsCompactFormFactor } from "@/constants/layout";
+import { confirmDialog } from "@/utils/confirm-dialog";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
 import { openWikiEditor } from "./wiki-editor-model";
 import { wikiAncestors } from "./wiki-structure";
-import { WikiDocument } from "./wiki-document";
+import { WikiRichEditor } from "./wiki-rich-editor";
 
-export function WikiEditor({
-  page,
-  pages,
-  serverId,
-  online,
-  onSaved,
-  onCancel,
-}: {
+export interface WikiNewPage {
+  title?: string;
+  body?: string;
+  parentId?: string | null;
+}
+interface EditorProps {
   page?: WikiPage;
+  initial?: WikiNewPage;
   pages: readonly WikiIndexEntry[];
   serverId: string;
   online: boolean;
   onSaved: (page: WikiPage) => void;
   onCancel: () => void;
-}) {
+}
+const DraftSchema = z.object({
+  page: WikiPageSchema.optional(),
+  title: z.string().max(160),
+  body: z.string().max(200000),
+  parentId: z.string().uuid().nullable(),
+  parentTitle: z.string(),
+});
+type Draft = z.infer<typeof DraftSchema>;
+export function WikiEditor(props: EditorProps) {
+  const key = `optimize.wiki.draft.${props.serverId}.${props.page?.id ?? "new"}`;
+  const [loaded, setLoaded] = useState<{ draft: Draft | null; error: string | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void AsyncStorage.getItem(key)
+      .then((raw) => {
+        let draft: Draft | null = null;
+        if (raw) {
+          try {
+            draft = DraftSchema.parse(JSON.parse(raw));
+          } catch {
+            /* Keep an unreadable draft on disk for recovery. */
+          }
+        }
+        if (!cancelled)
+          setLoaded({
+            draft,
+            error:
+              raw && !draft
+                ? "A previous draft could not be opened. Its saved copy has been kept."
+                : null,
+          });
+        return undefined;
+      })
+      .catch(() => {
+        if (!cancelled)
+          setLoaded({
+            draft: null,
+            error: "Local draft storage is unavailable. Publish before closing the editor.",
+          });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+  if (!loaded) return <Text style={styles.notice}>Opening article…</Text>;
+  return (
+    <WikiEditorForm
+      {...props}
+      draftKey={key}
+      recovered={loaded.draft}
+      storageError={loaded.error}
+    />
+  );
+}
+function WikiEditorForm({
+  page: currentPage,
+  initial,
+  pages,
+  serverId,
+  online,
+  onSaved,
+  onCancel,
+  draftKey,
+  recovered,
+  storageError,
+}: EditorProps & { draftKey: string; recovered: Draft | null; storageError: string | null }) {
+  const page = recovered?.page ?? currentPage;
+  const [draftError, setDraftError] = useState(storageError);
+  const [source, setSource] = useState(false);
   const [model] = useState(() =>
     openWikiEditor({
       page,
-      parentTitle: pages.find((entry) => entry.id === page?.parentId)?.title ?? "Top level",
+      initial: recovered ?? initial,
+      parentTitle:
+        recovered?.parentTitle ??
+        pages.find((entry) => entry.id === (initial?.parentId ?? page?.parentId))?.title ??
+        "Wiki home",
       write: async (input) => {
         const client = getHostRuntimeStore().getSnapshot(serverId)?.client;
         if (!client) throw new Error("Optimize is disconnected. Your draft is kept.");
@@ -47,20 +118,68 @@ export function WikiEditor({
     }),
   );
   const state = useSyncExternalStore(model.subscribe, model.getState, model.getState);
-  const [preview, setPreview] = useState(false);
-  const bodyInput = useRef<EditingTextInputHandle>(null);
-  const selection = useRef({ start: 0, end: 0 });
-  const compact = useIsCompactFormFactor();
-  const size = compact ? "md" : "sm";
-  const saving = state.status === "saving";
+  const [queue] = useState(() => ({ tail: Promise.resolve() }));
+  useEffect(() => {
+    return model.subscribe(() => {
+      const value = model.getState();
+      if (value.status !== "editing") return;
+      const draft: Draft = {
+        page,
+        title: value.title,
+        body: value.body,
+        parentId: value.parentId,
+        parentTitle: value.parentTitle,
+      };
+      queue.tail = queue.tail
+        .then(() => AsyncStorage.setItem(draftKey, JSON.stringify(draft)))
+        .catch(() => {
+          setDraftError("Draft could not be saved on this Mac. Publish before closing the editor.");
+        });
+    });
+  }, [model, page, draftKey, queue]);
+  const save = useCallback(async () => {
+    const saved = await model.save();
+    if (!saved) return;
+    await queue.tail;
+    try {
+      await AsyncStorage.removeItem(draftKey);
+    } catch {
+      /* The server save succeeded; do not offer a duplicate save. */
+    }
+    onSaved(saved);
+  }, [model, onSaved, queue, draftKey]);
+  const close = useCallback(async () => {
+    await queue.tail;
+    onCancel();
+  }, [onCancel, queue]);
+  const discard = useCallback(async () => {
+    if (
+      !(await confirmDialog({
+        title: "Discard this draft?",
+        message:
+          "The unpublished changes will be removed from this Mac. The published article stays available.",
+        confirmLabel: "Discard draft",
+        destructive: true,
+      }))
+    )
+      return;
+    await queue.tail;
+    try {
+      await AsyncStorage.removeItem(draftKey);
+      onCancel();
+    } catch {
+      setDraftError("Could not remove the local draft. Try again.");
+    }
+  }, [draftKey, onCancel, queue]);
+  const toggleSource = useCallback(() => setSource((value) => !value), []);
   const parentOptions = useMemo(
     () => [
-      { id: "root", value: "", label: "Top level" },
+      { id: "root", value: "", label: "Wiki home" },
       ...pages
         .filter(
           (entry) =>
             entry.id !== page?.id &&
-            !wikiAncestors({ id: entry.id, pages }).some((parent) => parent.id === page?.id),
+            !wikiAncestors({ id: entry.id, pages }).some((ancestor) => ancestor.id === page?.id),
         )
         .map((entry) => ({
           id: entry.id,
@@ -71,199 +190,152 @@ export function WikiEditor({
     ],
     [pages, page?.id],
   );
-  const linkOptions = useMemo(
-    () => pages.map((entry) => ({ id: entry.id, value: entry.id, label: entry.title })),
-    [pages],
-  );
-  const save = useCallback(async () => {
-    const saved = await model.save();
-    if (saved) onSaved(saved);
-  }, [model, onSaved]);
-  const insert = useCallback(
-    (before: string, after = "") => {
-      const text = bodyInput.current?.getText() ?? model.getState().body;
-      const start = Math.min(selection.current.start, text.length);
-      const end = Math.min(selection.current.end, text.length);
-      const middle = text.slice(start, end);
-      const replacement = before + middle + after;
-      const result = text.slice(0, start) + replacement + text.slice(end);
-      model.setBody(result);
-      bodyInput.current?.replaceText(result, {
-        start: start + before.length,
-        end: start + before.length + middle.length,
-      });
-      bodyInput.current?.focus();
-    },
-    [model],
-  );
-  const parentDisplay = useMemo(() => ({ label: state.parentTitle }), [state.parentTitle]);
   const chooseParent = useCallback(
     (id: string, display: SelectFieldDisplay) => model.setParent(id || null, display.label),
     [model],
   );
-  const showWrite = useCallback(() => setPreview(false), []);
-  const showPreview = useCallback(() => setPreview(true), []);
-  const insertHeading = useCallback(() => insert("\n## "), [insert]);
-  const insertBold = useCallback(() => insert("**", "**"), [insert]);
-  const insertList = useCallback(() => insert("\n- "), [insert]);
-  const insertTable = useCallback(
-    () => insert("\n| Column | Detail |\n| --- | --- |\n| Item | Description |\n"),
-    [insert],
-  );
-  const insertLink = useCallback(
-    (id: string, display: SelectFieldDisplay) => insert(`[[${id}|${display.label}]]`),
-    [insert],
-  );
-  const onSelection = useCallback(
-    (event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {
-      selection.current = event.nativeEvent.selection;
-    },
-    [],
-  );
+  const parentDisplay = useMemo(() => ({ label: state.parentTitle }), [state.parentTitle]);
+  const saving = state.status === "saving";
   return (
-    <ScrollView contentContainerStyle={styles.article} keyboardShouldPersistTaps="handled">
-      <View style={styles.toolbar}>
-        <Text style={styles.eyebrow}>{page ? "EDIT ARTICLE" : "NEW ARTICLE"}</Text>
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <View style={styles.status}>
+          <View style={styles.dot} />
+          <Text style={styles.muted}>Draft · visible to you until published</Text>
+        </View>
         <View style={styles.actions}>
-          <Button
-            size={size}
-            variant="ghost"
-            onPress={onCancel}
-            disabled={saving}
-            testID="wiki-cancel"
-          >
-            Cancel
+          <Button size="sm" variant="ghost" onPress={close} disabled={saving} testID="wiki-cancel">
+            Close
           </Button>
           <Button
-            size={size}
+            size="sm"
             onPress={save}
             disabled={!online || !state.canSave}
             loading={saving}
             testID="wiki-save"
           >
-            Save page
+            Publish changes
           </Button>
         </View>
       </View>
-      <Field label="Page title">
+      <ScrollView contentContainerStyle={styles.article} keyboardShouldPersistTaps="handled">
+        {recovered && (
+          <View style={styles.recovered}>
+            <Text style={styles.muted}>Your local draft was recovered.</Text>
+            <Button size="sm" variant="ghost" onPress={discard} disabled={saving}>
+              Discard draft
+            </Button>
+          </View>
+        )}
+        <SelectField
+          field={false}
+          label="Parent page"
+          value={state.parentId ?? ""}
+          selectedDisplay={parentDisplay}
+          options={parentOptions}
+          onChange={chooseParent}
+          placeholder="Wiki home"
+          emptyText="No pages"
+          disabled={saving}
+          searchable
+          size="sm"
+          triggerTestID="wiki-parent-trigger"
+        />
         <FormTextInput
-          size={size}
           initialValue={state.title}
           onChangeText={model.setTitle}
-          placeholder="Give this article a title"
+          placeholder="Untitled page"
           maxLength={160}
           editable={!saving}
           accessibilityLabel="Wiki page title"
           testID="wiki-title-input"
+          style={styles.title}
         />
-      </Field>
-      <SelectField
-        label="Inside"
-        value={state.parentId ?? ""}
-        selectedDisplay={parentDisplay}
-        options={parentOptions}
-        onChange={chooseParent}
-        placeholder="Choose an overview page"
-        emptyText="No pages"
-        disabled={saving}
-        searchable
-        size={size}
-        testID="wiki-parent"
-        triggerTestID="wiki-parent-trigger"
-      />
-      <View style={styles.toolbar}>
-        <View style={styles.actions}>
-          <Button size="sm" variant={preview ? "ghost" : "secondary"} onPress={showWrite}>
-            Write
-          </Button>
-          <Button
-            size="sm"
-            variant={preview ? "secondary" : "ghost"}
-            onPress={showPreview}
-            testID="wiki-preview"
-          >
-            Preview
+        <View style={styles.editingHeader}>
+          <Text style={styles.muted}>Write, format, and link your company knowledge.</Text>
+          <Button size="sm" variant="ghost" onPress={toggleSource} disabled={saving}>
+            {source ? "Visual editor" : "Markdown source"}
           </Button>
         </View>
-        <Text style={styles.hint}>Markdown · [[Article title]] links pages</Text>
-      </View>
-      {!preview && (
-        <View style={styles.actions}>
-          <Button size="sm" variant="ghost" onPress={insertHeading} disabled={saving}>
-            Heading
-          </Button>
-          <Button size="sm" variant="ghost" onPress={insertBold} disabled={saving}>
-            Bold
-          </Button>
-          <Button size="sm" variant="ghost" onPress={insertList} disabled={saving}>
-            List
-          </Button>
-          <Button size="sm" variant="ghost" onPress={insertTable} disabled={saving}>
-            Table
-          </Button>
-          <SelectField
-            field={false}
-            label="Insert article link"
-            value={null}
-            selectedDisplay={null}
-            options={linkOptions}
-            onChange={insertLink}
-            placeholder="Link article…"
-            emptyText="Create another article first"
-            disabled={saving}
-            searchable
-            size="sm"
-            triggerTestID="wiki-insert-link"
-          />
-        </View>
-      )}
-      <View style={preview ? styles.hidden : undefined}>
-        <Field label="Knowledge" error={state.error}>
+        {source ? (
           <FormTextInput
-            ref={bodyInput}
-            size={size}
+            key="source"
             initialValue={state.body}
             onChangeText={model.setBody}
-            onSelectionChange={onSelection}
-            placeholder="Write freely. Use headings, lists, tables and links to organize your knowledge."
             multiline
-            style={styles.body}
-            maxLength={100000}
             editable={!saving}
-            accessibilityLabel="Wiki page content"
+            accessibilityLabel="Markdown source"
             testID="wiki-body-input"
+            style={styles.source}
           />
-        </Field>
-      </View>
-      {preview && (
-        <View style={styles.preview} testID="wiki-editor-preview">
-          <WikiDocument
-            body={state.body || "This article is empty."}
+        ) : (
+          <WikiRichEditor
+            key="visual"
+            initialValue={state.body}
+            onChange={model.setBody}
+            disabled={saving}
             pages={pages}
-            onOpen={ignorePreviewLink}
           />
-          {state.error && <Text style={styles.error}>{state.error}</Text>}
-        </View>
-      )}
-    </ScrollView>
+        )}
+        {(state.error || draftError) && (
+          <Text style={styles.error}>{state.error || draftError}</Text>
+        )}
+        {!online && (
+          <Text style={styles.error}>
+            Offline. Your draft stays on this Mac; reconnect to publish.
+          </Text>
+        )}
+        <Text style={styles.footer}>
+          {state.body.length.toLocaleString()} / 100,000 characters · Published pages become
+          available to the team and assistant.
+        </Text>
+      </ScrollView>
+    </View>
   );
 }
 const styles = StyleSheet.create((theme) => ({
-  article: { padding: 28, gap: 20, flexGrow: 1 },
-  toolbar: {
+  screen: { flex: 1 },
+  header: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  actions: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
-  eyebrow: { color: theme.colors.foregroundMuted, fontSize: 11, letterSpacing: 1.4 },
-  hint: { color: theme.colors.foregroundMuted, fontSize: 12 },
-  body: { minHeight: 330, textAlignVertical: "top" },
-  hidden: { display: "none" },
-  preview: { minHeight: 330 },
-  error: { color: theme.colors.destructive },
+  status: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.foregroundMuted },
+  actions: { flexDirection: "row", gap: 8, alignItems: "center" },
+  article: { padding: 36, gap: 18, maxWidth: 940, width: "100%", alignSelf: "center", flexGrow: 1 },
+  title: {
+    fontSize: 34,
+    lineHeight: 44,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    fontWeight: "600",
+  },
+  editingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  muted: { color: theme.colors.foregroundMuted, fontSize: 12 },
+  source: { minHeight: 430, textAlignVertical: "top" },
+  error: { color: theme.colors.destructive, fontSize: 13 },
+  footer: { color: theme.colors.foregroundMuted, fontSize: 11, lineHeight: 18 },
+  recovered: {
+    padding: 12,
+    backgroundColor: theme.colors.surface1,
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  notice: { padding: 32, color: theme.colors.foregroundMuted },
 }));
-
-function ignorePreviewLink() {}

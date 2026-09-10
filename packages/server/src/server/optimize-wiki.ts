@@ -1,7 +1,7 @@
 import { wikiLinkTargets } from "@getpaseo/protocol/wiki-links";
 import type { WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
 import { constants } from "node:fs";
-import { mkdir, open, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import {
@@ -49,12 +49,72 @@ export class OptimizeWikiStore {
 
   async read(id: string): Promise<WikiPage> {
     if (!WikiPageIdSchema.safeParse(id).success) throw new WikiError("invalid", "Invalid page ID.");
+    return this.readPageFile(join(this.directory, `${id}.json`), id);
+  }
+
+  async readRevision(id: string, revision: string): Promise<WikiPage> {
+    if (!WikiPageIdSchema.safeParse(revision).success)
+      throw new WikiError("invalid", "Invalid revision ID.");
+    await this.read(id);
+    const directory = join(this.directory, "history", id);
+    await this.checkHistoryDirectory(directory);
+    const page = await this.readPageFile(join(directory, `${revision}.json`), id);
+    if (page.revision !== revision) throw new WikiError("invalid", "Revision identity mismatch.");
+    return page;
+  }
+
+  async history(id: string, offset = 0) {
+    await this.read(id);
+    if (!Number.isInteger(offset) || offset < 0) throw new WikiError("invalid", "Invalid offset.");
+    const directory = join(this.directory, "history", id);
+    try {
+      await this.checkHistoryDirectory(directory);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+        return { revisions: [], nextOffset: null };
+      throw error;
+    }
+    const entries = await readdir(directory, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      if (
+        !entry.isFile() ||
+        !entry.name.endsWith(".json") ||
+        !WikiPageIdSchema.safeParse(entry.name.slice(0, -5)).success
+      )
+        continue;
+      const stat = await lstat(join(directory, entry.name));
+      files.push({ name: entry.name, time: stat.mtimeMs });
+    }
+    files.sort((a, b) => b.time - a.time || a.name.localeCompare(b.name));
+    const revisions = [];
+    for (const file of files.slice(offset, offset + 50)) {
+      const page = await this.readRevision(id, file.name.slice(0, -5));
+      revisions.push({
+        id: page.id,
+        title: page.title,
+        revision: page.revision,
+        updatedAt: page.updatedAt,
+      });
+    }
+    return {
+      revisions,
+      nextOffset: offset + revisions.length < files.length ? offset + revisions.length : null,
+    };
+  }
+
+  private async checkHistoryDirectory(directory: string) {
+    for (const target of [join(this.directory, "history"), directory]) {
+      const stat = await lstat(target);
+      if (!stat.isDirectory() || stat.isSymbolicLink())
+        throw new WikiError("invalid", "Wiki history directory is invalid.");
+    }
+  }
+
+  private async readPageFile(filename: string, id: string): Promise<WikiPage> {
     let file;
     try {
-      file = await open(
-        join(this.directory, `${id}.json`),
-        constants.O_RDONLY | constants.O_NOFOLLOW,
-      );
+      file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
       const stat = await file.stat();
       if (!stat.isFile() || stat.size > 650_000)
         throw new WikiError("invalid", "Wiki page is invalid or too large.");

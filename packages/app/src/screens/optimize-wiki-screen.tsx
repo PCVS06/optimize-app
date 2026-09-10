@@ -1,24 +1,29 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { useCallback, useMemo, useState, useRef } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useMemo, useState, useRef, type ReactNode } from "react";
+import { ScrollView, Text, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
-import { BookOpen, Plus, Pencil, ArrowLeft } from "lucide-react-native";
+import { Plus, Pencil, ArrowLeft, Star, History } from "lucide-react-native";
 import { StyleSheet } from "react-native-unistyles";
 import type { DaemonClient } from "@getpaseo/client/internal/daemon-client";
-import type { WikiPage, WikiPageSummary, WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
+import type { WikiPage, WikiIndexEntry } from "@getpaseo/protocol/optimize-wiki";
 import { MenuHeader } from "@/components/headers/menu-header";
 import { Button } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/search-field";
 import { HostFilter } from "@/components/hosts/host-filter";
 import { useIsCompactFormFactor } from "@/constants/layout";
 import { useHosts, useHostRuntimeSnapshot } from "@/runtime/host-runtime";
 import { useHostFeature } from "@/runtime/host-features";
 import { useFetchQuery } from "@/data/query";
 import { queryClient } from "@/data/query-client";
-import { WikiEditor } from "@/wiki/wiki-editor";
+import { WikiEditor, type WikiNewPage } from "@/wiki/wiki-editor";
 import { WikiDocument } from "@/wiki/wiki-document";
 import { WikiGraph } from "@/wiki/wiki-graph";
-import { WikiOverview, WikiBreadcrumbs, WikiRelated } from "@/wiki/wiki-navigation";
+import { WikiBreadcrumbs, WikiRelated } from "@/wiki/wiki-navigation";
+
+import { WikiLibrary } from "@/wiki/wiki-library";
+import { WikiHome } from "@/wiki/wiki-home";
+import { WikiHistory } from "@/wiki/wiki-history";
+import { useWikiFavorites } from "@/wiki/wiki-preferences";
+
+const EMPTY_PAGES: readonly WikiIndexEntry[] = [];
 
 export function OptimizeWikiScreen() {
   const hosts = useHosts();
@@ -62,7 +67,7 @@ interface WikiHostProps {
 }
 function WikiHost({ serverId, active, onEditingChange }: WikiHostProps) {
   const runtime = useHostRuntimeSnapshot(serverId);
-  const supportsWiki = useHostFeature(serverId, "optimizeWikiGraph");
+  const supportsWiki = useHostFeature(serverId, "optimizeWikiDocuments");
   const client = runtime?.client;
   const online = runtime?.connectionStatus === "online";
   return (
@@ -98,7 +103,8 @@ function WikiWorkspace({
   const [graph, setGraph] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{ page?: WikiPage } | null>(null);
+  const [editor, setEditor] = useState<{ page?: WikiPage; initial?: WikiNewPage } | null>(null);
+  const favorites = useWikiFavorites(serverId);
   const enabled = active && online && supportsWiki && Boolean(client);
   const index = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "index", connectionEpoch],
@@ -113,7 +119,7 @@ function WikiWorkspace({
     staleTimeMs: 5000,
     refetchInterval: 10000,
   });
-  const pages = index.data ?? [];
+  const pages = index.data ?? EMPTY_PAGES;
   const select = useCallback((id: string) => {
     setSelectedId(id);
     setGraph(false);
@@ -132,13 +138,17 @@ function WikiWorkspace({
     refetchInterval: 10000,
   });
   const openEditor = useCallback(
-    (page?: WikiPage) => {
-      setEditor({ page });
+    (page?: WikiPage, initial?: WikiNewPage) => {
+      setEditor({ page, initial });
       onEditingChange(true);
     },
     [onEditingChange],
   );
-  const newPage = useCallback(() => openEditor(), [openEditor]);
+  const newPage = useCallback(
+    (initial?: WikiNewPage) => openEditor(undefined, initial),
+    [openEditor],
+  );
+  const newBlankPage = useCallback(() => newPage(), [newPage]);
   const closeEditor = useCallback(() => {
     setEditor(null);
     onEditingChange(false);
@@ -159,10 +169,6 @@ function WikiWorkspace({
     setSearch(value);
     setOffset(0);
   }, []);
-  const refetchList = list.refetch;
-  const retry = useCallback(() => {
-    void refetchList();
-  }, [refetchList]);
   const back = useCallback(() => {
     setSelectedId(null);
     setGraph(false);
@@ -172,252 +178,143 @@ function WikiWorkspace({
     setGraph(true);
   }, []);
   const showDetails = Boolean(editor || selectedId || graph);
+  const library = useMemo(
+    () => (
+      <WikiLibrary
+        compact={compact}
+        pages={pages}
+        results={list.data?.pages}
+        error={list.error || index.error}
+        enabled={enabled}
+        editing={Boolean(editor)}
+        selectedId={selectedId}
+        onOpen={select}
+        onHome={back}
+        onGraph={showGraph}
+        search={search}
+        onSearch={changeSearch}
+        offset={offset}
+        onOffset={setOffset}
+        nextOffset={list.data?.nextOffset ?? null}
+        onNew={newBlankPage}
+        favorites={favorites.ids}
+      />
+    ),
+    [
+      compact,
+      pages,
+      list.data,
+      list.error,
+      index.error,
+      enabled,
+      editor,
+      selectedId,
+      select,
+      back,
+      showGraph,
+      search,
+      changeSearch,
+      offset,
+      newBlankPage,
+      favorites.ids,
+    ],
+  );
+  const detail = useMemo(
+    () => (
+      <View style={styles.detail}>
+        {editor && (
+          <WikiEditor
+            key={editor.page?.id ?? "new"}
+            page={editor.page}
+            initial={editor.initial}
+            pages={pages}
+            serverId={serverId}
+            online={enabled}
+            onSaved={onSaved}
+            onCancel={closeEditor}
+          />
+        )}
+        {!editor && selectedId && (
+          <WikiReader
+            key={selectedId}
+            serverId={serverId}
+            id={selectedId}
+            client={client}
+            enabled={enabled}
+            connectionEpoch={connectionEpoch}
+            compact={compact}
+            onEdit={openEditor}
+            onNew={newPage}
+            favorite={favorites.ids.includes(selectedId)}
+            onFavorite={favorites.toggle}
+            onBack={back}
+            pages={pages}
+            onOpen={select}
+          />
+        )}
+        {graph && !editor && (
+          <>
+            <Button size="sm" variant="ghost" onPress={back}>
+              Wiki home
+            </Button>
+            <WikiGraph pages={pages} onOpen={select} />
+          </>
+        )}
+        {!showDetails && (
+          <WikiHome
+            pages={pages}
+            favorites={favorites.ids}
+            onOpen={select}
+            onCreate={newPage}
+            enabled={enabled}
+          />
+        )}
+      </View>
+    ),
+    [
+      editor,
+      pages,
+      serverId,
+      enabled,
+      onSaved,
+      closeEditor,
+      selectedId,
+      client,
+      connectionEpoch,
+      compact,
+      openEditor,
+      newPage,
+      favorites.ids,
+      favorites.toggle,
+      back,
+      select,
+      graph,
+      showDetails,
+    ],
+  );
   return (
     <View style={styles.content}>
       <WikiConnectionNotice online={online} supportsWiki={supportsWiki} error={index.error} />
-      <View style={[styles.columns, compact && styles.columnsCompact]}>
-        {(!compact || !showDetails) && (
-          <WikiLibrary
-            compact={compact}
-            list={list}
-            enabled={enabled}
-            editing={Boolean(editor)}
-            selectedId={selectedId}
-            select={select}
-            onHome={back}
-            onGraph={showGraph}
-            search={search}
-            onSearch={changeSearch}
-            offset={offset}
-            setOffset={setOffset}
-            onNew={newPage}
-            retry={retry}
-          />
-        )}
-        {(!compact || showDetails) && (
-          <View style={styles.detail}>
-            {editor && (
-              <WikiEditor
-                key={editor.page?.id ?? "new"}
-                page={editor.page}
-                pages={pages}
-                serverId={serverId}
-                online={enabled}
-                onSaved={onSaved}
-                onCancel={closeEditor}
-              />
-            )}
-            {!editor && selectedId && (
-              <WikiReader
-                serverId={serverId}
-                id={selectedId}
-                client={client}
-                enabled={enabled}
-                connectionEpoch={connectionEpoch}
-                compact={compact}
-                onEdit={openEditor}
-                onBack={back}
-                pages={pages}
-                onOpen={select}
-              />
-            )}
-            {graph && !editor && (
-              <>
-                <Button size="sm" variant="ghost" onPress={back}>
-                  Wiki home
-                </Button>
-                <WikiGraph pages={pages} onOpen={select} />
-              </>
-            )}
-            {!showDetails && (
-              <WikiLanding pages={pages} select={select} newPage={newPage} enabled={enabled} />
-            )}
-          </View>
-        )}
-      </View>
+      <WikiColumns compact={compact} showDetails={showDetails} library={library} detail={detail} />
     </View>
   );
 }
-
-interface WikiListData {
-  pages: WikiPageSummary[];
-  total: number;
-  nextOffset: number | null;
-}
-interface WikiLibraryProps {
-  onHome: () => void;
-  onGraph: () => void;
-  compact: boolean;
-  list: UseQueryResult<WikiListData, Error>;
-  enabled: boolean;
-  editing: boolean;
-  selectedId: string | null;
-  select: (id: string) => void;
-  search: string;
-  onSearch: (value: string) => void;
-  offset: number;
-  setOffset: (offset: number) => void;
-  onNew: () => void;
-  retry: () => void;
-}
-function WikiLibrary({
-  onHome,
-  onGraph,
+function WikiColumns({
   compact,
-  list,
-  enabled,
-  editing,
-  selectedId,
-  select,
-  search,
-  onSearch,
-  offset,
-  setOffset,
-  onNew,
-  retry,
-}: WikiLibraryProps) {
-  const previous = useCallback(() => setOffset(Math.max(0, offset - 50)), [offset, setOffset]);
-  const nextOffset = list.data?.nextOffset;
-  const next = useCallback(() => {
-    if (nextOffset != null) setOffset(nextOffset);
-  }, [nextOffset, setOffset]);
-  return (
-    <View style={[styles.library, compact && styles.libraryCompact]}>
-      <View style={styles.libraryHeading}>
-        <Text style={styles.eyebrow}>COMPANY KNOWLEDGE</Text>
-        <Button
-          size="sm"
-          variant="ghost"
-          leftIcon={Plus}
-          onPress={onNew}
-          disabled={!enabled || editing}
-          testID="wiki-new-page"
-          accessibilityLabel="New Wiki page"
-        >
-          New page
-        </Button>
-      </View>
-      <View style={styles.actions}>
-        <Button size="sm" variant="ghost" onPress={onHome} disabled={editing}>
-          Home
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onPress={onGraph}
-          disabled={editing || !enabled}
-          testID="wiki-open-graph"
-        >
-          Graph
-        </Button>
-      </View>
-      <View style={styles.searchRow} testID="wiki-search-row">
-        <SearchField
-          value={search}
-          onChangeText={onSearch}
-          placeholder="Search the Wiki…"
-          clearAccessibilityLabel="Clear Wiki search"
-          testID="wiki-search"
-        />
-      </View>
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-        <WikiList
-          pages={list.data?.pages}
-          error={list.error}
-          search={search}
-          selectedId={selectedId}
-          disabled={editing}
-          select={select}
-          retry={retry}
-        />
-      </ScrollView>
-      <View style={styles.pagination}>
-        {list.data && <Text style={styles.muted}>Pages: {list.data.total}</Text>}
-        {offset > 0 && (
-          <Button size="sm" variant="ghost" onPress={previous}>
-            Previous
-          </Button>
-        )}
-        {nextOffset != null && (
-          <Button size="sm" variant="ghost" onPress={next}>
-            Next
-          </Button>
-        )}
-      </View>
-    </View>
-  );
-}
-
-interface WikiListProps {
-  pages?: WikiPageSummary[];
-  error: Error | null;
-  search: string;
-  selectedId: string | null;
-  disabled: boolean;
-  select: (id: string) => void;
-  retry: () => void;
-}
-function WikiList({ pages, error, search, selectedId, disabled, select, retry }: WikiListProps) {
-  if (error)
-    return (
-      <View style={styles.messageBlock}>
-        <Text style={styles.error}>{error.message}</Text>
-        <Button size="sm" variant="ghost" onPress={retry}>
-          Try again
-        </Button>
-      </View>
-    );
-  if (!pages) return <Text style={styles.muted}>Loading pages…</Text>;
-  if (pages.length === 0)
-    return (
-      <Text style={styles.muted}>
-        {search
-          ? "No matching pages. Try different words."
-          : "Your company knowledge starts here. Add your first page."}
-      </Text>
-    );
-  return (
-    <>
-      {pages.map((page) => (
-        <WikiRow
-          key={page.id}
-          page={page}
-          selected={selectedId === page.id}
-          disabled={disabled}
-          select={select}
-        />
-      ))}
-    </>
-  );
-}
-function WikiRow({
-  page,
-  selected,
-  disabled,
-  select,
+  showDetails,
+  library,
+  detail,
 }: {
-  page: WikiPageSummary;
-  selected: boolean;
-  disabled: boolean;
-  select: (id: string) => void;
+  compact: boolean;
+  showDetails: boolean;
+  library: ReactNode;
+  detail: ReactNode;
 }) {
-  const onPress = useCallback(() => select(page.id), [select, page.id]);
   return (
-    <Pressable
-      disabled={disabled}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={page.title}
-      style={[styles.pageRow, selected && styles.pageRowSelected]}
-      testID={`wiki-page-${page.id}`}
-    >
-      <Text numberOfLines={2} style={styles.pageTitle}>
-        {page.title}
-      </Text>
-      <Text numberOfLines={2} style={styles.excerpt}>
-        {page.excerpt || "Empty page"}
-      </Text>
-    </Pressable>
+    <View style={[styles.columns, compact && styles.columnsCompact]}>
+      {(!compact || !showDetails) && library}
+      {(!compact || showDetails) && detail}
+    </View>
   );
 }
 
@@ -430,7 +327,10 @@ interface WikiReaderProps {
   enabled: boolean;
   connectionEpoch: number;
   compact: boolean;
-  onEdit: (page: WikiPage) => void;
+  onEdit: (page: WikiPage, initial?: WikiNewPage) => void;
+  onNew: (initial?: WikiNewPage) => void;
+  favorite: boolean;
+  onFavorite: (id: string) => void;
   onBack: () => void;
 }
 function WikiReader({
@@ -443,9 +343,16 @@ function WikiReader({
   connectionEpoch,
   compact,
   onEdit,
+  onNew,
+  favorite,
+  onFavorite,
   onBack,
 }: WikiReaderProps) {
   const scroll = useRef<ScrollView>(null);
+  const [history, setHistory] = useState(false);
+  const toggleHistory = useCallback(() => setHistory((value) => !value), []);
+  const toggleFavorite = useCallback(() => onFavorite(id), [onFavorite, id]);
+  const newChild = useCallback(() => onNew({ parentId: id }), [onNew, id]);
   const jump = useCallback((y: number) => scroll.current?.scrollTo({ y, animated: true }), []);
   const query = useFetchQuery({
     queryKey: ["optimize-wiki", serverId, "page", id, connectionEpoch],
@@ -463,6 +370,12 @@ function WikiReader({
   const edit = useCallback(() => {
     if (query.data) onEdit(query.data);
   }, [query.data, onEdit]);
+  const restore = useCallback(
+    (initial: WikiNewPage) => {
+      if (query.data) onEdit(query.data, initial);
+    },
+    [query.data, onEdit],
+  );
   const refetchPage = query.refetch;
   const retry = useCallback(() => {
     void refetchPage();
@@ -477,18 +390,50 @@ function WikiReader({
         ) : (
           <Text style={styles.eyebrow}>OPTIMIZE WIKI</Text>
         )}
-        <Button
-          size="sm"
-          variant="secondary"
-          leftIcon={Pencil}
-          disabled={!enabled || !query.data || query.isFetching}
-          onPress={edit}
-          testID="wiki-edit-page"
-        >
-          Edit page
-        </Button>
+        <View style={styles.actions}>
+          <Button
+            size="sm"
+            variant={favorite ? "secondary" : "ghost"}
+            leftIcon={Star}
+            onPress={toggleFavorite}
+            accessibilityLabel={favorite ? "Remove favorite" : "Add favorite"}
+          />
+          <Button
+            size="sm"
+            variant={history ? "secondary" : "ghost"}
+            leftIcon={History}
+            onPress={toggleHistory}
+            disabled={!enabled || !query.data}
+            accessibilityLabel="Version history"
+            testID="wiki-open-history"
+          />
+          <Button size="sm" variant="ghost" leftIcon={Plus} onPress={newChild} disabled={!enabled}>
+            Subpage
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={Pencil}
+            disabled={!enabled || !query.data || query.isFetching}
+            onPress={edit}
+            testID="wiki-edit-page"
+          >
+            Edit page
+          </Button>
+        </View>
       </View>
       <WikiBreadcrumbs id={id} pages={pages} onOpen={onOpen} onHome={onBack} />
+      {history && query.data && client && enabled && (
+        <WikiHistory
+          page={query.data}
+          pages={pages}
+          client={client}
+          serverId={serverId}
+          onRestore={restore}
+          onClose={toggleHistory}
+          onOpen={onOpen}
+        />
+      )}
       <WikiArticle
         page={query.data}
         error={query.error}
@@ -543,22 +488,6 @@ function WikiArticle({
     </>
   );
 }
-function WikiEmpty({ onCreate, enabled }: { onCreate: () => void; enabled: boolean }) {
-  return (
-    <View style={styles.empty}>
-      <Text style={styles.title}>Knowledge for everyone.</Text>
-      <Text style={styles.intro}>
-        Product details, support guidance, and how Optimize works — in one place for your team and
-        your assistant.
-      </Text>
-      <Button leftIcon={BookOpen} onPress={onCreate} disabled={!enabled} testID="wiki-create-first">
-        Create a page
-      </Button>
-      <Text style={styles.caption}>Shared across projects on this Optimize host.</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create((theme) => ({
   screen: { flex: 1, backgroundColor: theme.colors.surface0 },
   content: { flex: 1 },
@@ -636,23 +565,4 @@ function WikiConnectionNotice({
     return <Text style={styles.notice}>Update this Optimize host to use the connected Wiki.</Text>;
   if (error) return <Text style={styles.notice}>{error.message}</Text>;
   return null;
-}
-
-function WikiLanding({
-  pages,
-  select,
-  newPage,
-  enabled,
-}: {
-  pages: readonly WikiIndexEntry[];
-  select: (id: string) => void;
-  newPage: () => void;
-  enabled: boolean;
-}) {
-  if (!pages.length) return <WikiEmpty onCreate={newPage} enabled={enabled} />;
-  return (
-    <ScrollView contentContainerStyle={styles.article}>
-      <WikiOverview pages={pages} onOpen={select} />
-    </ScrollView>
-  );
 }

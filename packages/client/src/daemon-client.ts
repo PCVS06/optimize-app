@@ -4926,6 +4926,20 @@ export class DaemonClient {
     this.sendSessionMessageStrict(response);
   }
 
+  async historyWiki(id: string, offset = 0) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.history.request", id, offset },
+      responseType: "wiki.history.response",
+    });
+  }
+
+  async revisionWiki(id: string, revision: string) {
+    return this.sendCorrelatedSessionRequest({
+      message: { type: "wiki.revision.request", id, revision },
+      responseType: "wiki.revision.response",
+    });
+  }
+
   async indexWiki() {
     return this.sendCorrelatedSessionRequest({
       message: { type: "wiki.index.request" },

@@ -832,9 +832,23 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     );
   await page.getByTestId("wiki-new-page").click();
   await page.getByTestId("wiki-title-input").fill("Product care guide");
+  const rich = page.getByTestId("wiki-rich-content");
+  await rich.click();
+  await rich.pressSequentially("## Care");
+  await rich.press("Enter");
+  await rich.pressSequentially("Use the approved service guide. WIKI_CONTEXT_718.");
+  await page.getByTestId("wiki-cancel").click();
+  await page.getByTestId("wiki-new-page").click();
+  await page.getByText("Your local draft was recovered.", { exact: true }).waitFor();
   await page
-    .getByTestId("wiki-body-input")
-    .fill("## Care\nUse the approved service guide. WIKI_CONTEXT_718.");
+    .getByTestId("wiki-rich-content")
+    .getByText("Use the approved service guide. WIKI_CONTEXT_718.")
+    .waitFor();
+  if (artifactDir)
+    await page.screenshot({
+      path: path.join(artifactDir, "optimize-wiki-editor.png"),
+      fullPage: true,
+    });
   await page.getByTestId("wiki-save").click();
   await page.getByTestId("wiki-article-title").waitFor();
   const wikiFiles = fs
@@ -846,6 +860,7 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   if (savedWiki.title !== "Product care guide" || !savedWiki.body.includes("WIKI_CONTEXT_718"))
     throw new Error("Saved Wiki content does not match the editor");
   await page.getByTestId("wiki-edit-page").click();
+  await page.getByRole("button", { name: "Markdown source", exact: true }).click();
   await page
     .getByTestId("wiki-body-input")
     .fill("## Care\nUpdated company guidance. WIKI_CONTEXT_UPDATED_719.");
@@ -869,14 +884,17 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByTestId("wiki-table-of-contents").getByText("Care", { exact: true }).waitFor();
   await page.getByTestId("wiki-new-page").click();
   await page.getByTestId("wiki-title-input").fill("Products overview");
-  await page.getByTestId("wiki-body-input").fill(`## Guides\n[[${savedWiki.id}|Care article]]`);
-  await page.getByTestId("wiki-preview").click();
-  await page
-    .getByTestId("wiki-editor-preview")
-    .getByText("Care article", { exact: true })
-    .waitFor();
+  await rich.click();
+  await rich.pressSequentially("## Guides");
+  await rich.press("Enter");
+  await page.getByTestId("wiki-insert-link").click();
+  await page.getByTestId(`wiki-link-option-${savedWiki.id}`).click();
+  await rich.getByText("Product care guide", { exact: true }).waitFor();
   await page.getByTestId("wiki-save").click();
-  await page.getByTestId("wiki-article-body").getByText("Care article", { exact: true }).click();
+  await page
+    .getByTestId("wiki-article-body")
+    .getByText("Product care guide", { exact: true })
+    .click();
   await page.getByTestId("wiki-article-title").filter({ hasText: "Product care guide" }).waitFor();
   await page
     .getByTestId("wiki-backlinks")
@@ -894,7 +912,7 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
   await page.getByTestId("wiki-save").click();
   await page.getByTestId("wiki-article-title").waitFor();
   const updatedChild = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
-  if (!updatedChild.parentId) throw new Error("Wiki hierarchy did not persist");
+  if (updatedChild.parentId !== overview.id) throw new Error("Wiki hierarchy did not persist");
   await page.getByTestId("wiki-open-graph").click();
   await page.getByTestId("wiki-graph").waitFor();
   if (artifactDir)
@@ -912,6 +930,29 @@ async function verifyOptimizeWiki({ page, daemonHome, artifactDir }) {
     .waitFor();
   if (artifactDir)
     await page.screenshot({ path: path.join(artifactDir, "optimize-wiki.png"), fullPage: true });
+  await page.getByTestId("wiki-subpages").getByText("Product care guide", { exact: true }).click();
+  await page.getByTestId("wiki-open-history").click();
+  await page.getByTestId(`wiki-revision-${savedWiki.revision}`).click();
+  await page.getByTestId("wiki-restore-revision").click();
+  await page
+    .getByTestId("wiki-rich-content")
+    .getByText("Use the approved service guide. WIKI_CONTEXT_718.")
+    .waitFor();
+  await page.getByTestId("wiki-save").click();
+  await page.getByTestId("wiki-article-title").waitFor();
+  const restored = JSON.parse(fs.readFileSync(wikiFile, "utf8"));
+  if (!restored.body.includes("WIKI_CONTEXT_718") || restored.revision === savedWiki.revision)
+    throw new Error(
+      "Restoring a Wiki revision must publish a new version with the previous content",
+    );
+  await page.getByRole("button", { name: "Add favorite", exact: true }).click();
+  await page.getByTestId(`wiki-favorite-${savedWiki.id}`).waitFor();
+  await page.getByTestId("wiki-home-navigation").click();
+  if (artifactDir)
+    await page.screenshot({
+      path: path.join(artifactDir, "optimize-wiki-home.png"),
+      fullPage: true,
+    });
 }
 
 async function smokePackagedDesktopApp({ appPath }) {

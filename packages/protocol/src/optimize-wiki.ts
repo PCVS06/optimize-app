@@ -94,3 +94,42 @@ export const WikiIndexResponseSchema = z.object({
     z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
   ]),
 });
+
+export const WikiHistoryRequestSchema = z.object({
+  type: z.literal("wiki.history.request"),
+  requestId: z.string(),
+  id: WikiPageIdSchema,
+  offset: z.number().int().min(0).optional(),
+});
+export const WikiRevisionSummarySchema = WikiPageSchema.pick({
+  id: true,
+  title: true,
+  revision: true,
+  updatedAt: true,
+});
+export type WikiRevisionSummary = z.infer<typeof WikiRevisionSummarySchema>;
+export const WikiHistoryResponseSchema = z.object({
+  type: z.literal("wiki.history.response"),
+  payload: z.union([
+    z.object({
+      requestId: z.string(),
+      ok: z.literal(true),
+      revisions: z.array(WikiRevisionSummarySchema),
+      nextOffset: z.number().int().nullable(),
+    }),
+    z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
+  ]),
+});
+export const WikiRevisionRequestSchema = z.object({
+  type: z.literal("wiki.revision.request"),
+  requestId: z.string(),
+  id: WikiPageIdSchema,
+  revision: WikiPageIdSchema,
+});
+export const WikiRevisionResponseSchema = z.object({
+  type: z.literal("wiki.revision.response"),
+  payload: z.union([
+    z.object({ requestId: z.string(), ok: z.literal(true), page: WikiPageSchema }),
+    z.object({ requestId: z.string(), ok: z.literal(false), error: WikiErrorSchema }),
+  ]),
+});

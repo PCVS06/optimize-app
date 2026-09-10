@@ -18,6 +18,55 @@ afterEach(async () => {
   await rm(home, { recursive: true, force: true });
 });
 
+test("lists published revisions and restores content without replacing revision history", async () => {
+  const first = await wiki.write({
+    title: "Care",
+    body: "Original guidance",
+    expectedRevision: null,
+  });
+  expect(await wiki.history(first.id)).toEqual({ revisions: [], nextOffset: null });
+  const second = await wiki.write({
+    id: first.id,
+    title: "Care",
+    body: "Updated guidance",
+    expectedRevision: first.revision,
+  });
+  const history = await wiki.history(first.id);
+  expect(history.revisions.map((entry) => entry.revision)).toEqual([first.revision]);
+  const old = await wiki.readRevision(first.id, first.revision);
+  expect(old.body).toBe("Original guidance");
+  const restored = await wiki.write({
+    id: first.id,
+    title: old.title,
+    body: old.body,
+    expectedRevision: second.revision,
+  });
+  expect(restored.revision).not.toBe(first.revision);
+  expect((await wiki.history(first.id)).revisions).toHaveLength(2);
+  expect((await wiki.readRevision(first.id, second.revision)).body).toBe("Updated guidance");
+  await expect(wiki.readRevision(first.id, "../config")).rejects.toMatchObject({ code: "invalid" });
+  await expect(wiki.history(first.id, -1)).rejects.toMatchObject({ code: "invalid" });
+});
+
+test("refuses substituted revision files and symbolic history directories", async () => {
+  const first = await wiki.write({ title: "Care", body: "Original", expectedRevision: null });
+  await wiki.write({
+    id: first.id,
+    title: "Care",
+    body: "Current",
+    expectedRevision: first.revision,
+  });
+  const revisionFile = join(wiki.directory, "history", first.id, `${first.revision}.json`);
+  await rm(revisionFile);
+  await symlink(join(wiki.directory, `${first.id}.json`), revisionFile);
+  await expect(wiki.readRevision(first.id, first.revision)).rejects.toMatchObject({
+    code: "unavailable",
+  });
+  await rm(join(wiki.directory, "history", first.id), { recursive: true });
+  await symlink(wiki.directory, join(wiki.directory, "history", first.id));
+  await expect(wiki.history(first.id)).rejects.toMatchObject({ code: "invalid" });
+});
+
 test("starts empty and persists readable company knowledge across store restarts", async () => {
   expect(await wiki.search()).toEqual({ pages: [], total: 0, nextOffset: null });
   const page = await wiki.write({
