@@ -2454,12 +2454,12 @@ export class Session {
 
   private dispatchWikiMessage(msg: SessionInboundMessage): Promise<void> | undefined {
     switch (msg.type) {
-      case "wiki.trash.request":
-      case "wiki.archive.request":
       case "memory.list.request":
       case "memory.write.request":
       case "memory.remove.request":
         return this.optimizeMemorySession.handle(msg);
+      case "wiki.trash.request":
+      case "wiki.archive.request":
       case "wiki.history.request":
       case "wiki.revision.request":
       case "wiki.index.request":

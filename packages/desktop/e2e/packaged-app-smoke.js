@@ -1004,6 +1004,13 @@ async function verifyCompanyChats({ page, daemonHome, artifactDir }) {
       ),
     "named company project",
   );
+  const projectChat = await waitForSavedRecord(
+    workspacesFile,
+    (rows) => rows.find((row) => row.projectId === project.projectId),
+    "first project chat",
+  );
+  await page.getByTestId(`company-chat-${projectChat.workspaceId}`).waitFor();
+  await page.getByText("How can I help?", { exact: true }).waitFor();
   const before = new Set(
     (fs.existsSync(workspacesFile) ? JSON.parse(fs.readFileSync(workspacesFile, "utf8")) : []).map(
       (row) => row.workspaceId,
