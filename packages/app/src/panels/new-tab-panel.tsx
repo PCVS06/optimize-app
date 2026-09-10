@@ -325,7 +325,7 @@ const styles = StyleSheet.create((theme) => ({
   rail: {
     width: "100%",
     maxWidth: LAUNCHER_MAX_WIDTH,
-    gap: theme.spacing[5],
+    gap: theme.spacing[6],
   },
   welcome: { gap: theme.spacing[3], marginBottom: theme.spacing[3] },
   welcomeTitle: {

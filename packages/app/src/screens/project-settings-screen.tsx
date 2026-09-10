@@ -708,7 +708,7 @@ function ProjectConfigForm({
           placeholder={t("optimize.projectInstructionsPlaceholder")}
         />
       </SettingsGroup>
-      <AdvancedOptions testID="project-advanced-options">
+      <AdvancedOptions testID="project-advanced-options" forceOpen={hasInvalidScripts}>
         <SettingsGroup
           title={t("settings.project.worktree.title")}
           info={t("settings.project.worktree.info")}
